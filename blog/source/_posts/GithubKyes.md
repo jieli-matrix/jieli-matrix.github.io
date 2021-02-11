@@ -84,8 +84,8 @@ git config --global --unset user.email youremail
 在每个仓库内 进行局部配置
 
 ``` shell
-git config --local --set user.name yourname
-git config --local --set user.email yourname
+git config user.name yourname
+git config user.email yourname
 ```
 
 设定仓库作用域
@@ -95,3 +95,28 @@ $ git remote add origin git@siran.github.com:siran/demo.git
 ```
 
 至此，已经完成相应仓库的用户配置。
+
+### 关于windows系统的git用户管理
+
+上述方案从windonws切换到mac管理git用户无问题，但当从mac切换到windows对git用户管理则失效。其根本原因在于windows在初期配置了用户A的git credential信息
+> Control Panel\User Accounts\Credential Manager 
+
+打开控制面板，进入用户信息，查看证书管理会发现已配置了github与gitee的证书信息
+![cred.png](https://i.loli.net/2021/02/11/CkDdgmjqXTVf9J2.png)
+
+此时删除该证书，重新使用http方式clone仓库到本地，在推送时会弹出用户信息验证，即可顺利推送。
+
+通过查阅Git凭证存储的文档，Git通过凭证存储系统对用户信息进行管理，以下是常见选项：
+- 默认所有都不缓存。
+每一次连接都会询问你的用户名和密码。
+- “cache”模式 
+将凭证存放在内存中一段时间。 密码永远不会被存储在磁盘中，并且在15分钟后从内存中清除。
+- “store”模式
+凭证用明文的形式存放在磁盘中，并且永不过期。密码是以**明文**的方式存放。
+- mac系统加密
+“osxkeychain”模式，它会将凭证缓存到你系统用户的钥匙串中。这种方式将**加密**凭证存放在磁盘中，并且永不过期。
+- windows
+Git Credential Manager for Windows会将用户信息以证书形式存储到证书中，之后遇到Git身份验证都会最先从证书中读取已有用户信息。
+
+因此，在windows下建议使用cache模式，以避免多账号切换时带来的不必要麻烦。
+
