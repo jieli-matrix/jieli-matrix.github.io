@@ -105,12 +105,11 @@ theme: ayer
 ## Docs: https://hexo.io/docs/one-command-deployment
 deploy:
 - type: git
-  repo: https://github.com/jieli-matrix/jieli-matrix.github.io.git
-  branch: main
-- type: git
   repo: https://gitee.com/jieli-matrix/jieli-matrix.git
   branch: main
-
+- type: git
+  repo: https://github.com/jieli-matrix/jieli-matrix.github.io.git
+  branch: main
 plugins:
   hexo-generator-feed
   hexo-generator-searchdb

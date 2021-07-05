@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Trace of Life</title>
+  
+  
+  <link href="https://jieli-matrix.github.io/atom.xml" rel="self"/>
+  
+  <link href="https://jieli-matrix.github.io/"/>
+  <updated>2021-07-05T15:03:44.493Z</updated>
+  <id>https://jieli-matrix.github.io/</id>
+  
+  <author>
+    <name>Jie Li</name>
+    
+  </author>
+  
+  <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Git的ssh配置</title>
+    <link href="https://jieli-matrix.github.io/gitssh/"/>
+    <id>https://jieli-matrix.github.io/gitssh/</id>
+    <published>2021-07-05T11:28:16.000Z</published>
+    <updated>2021-07-05T15:03:44.493Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;近期配置新电脑时，按照惯常的ssh免密配置步骤对git进行免密配置，然而在git push origin main时一直出现如下报错&lt;/p&gt;
+&lt;figure class=&quot;highlight shell&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;Permissiondenied (publickey).&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;fatal:Could not read from remote repository.&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Pleasemake sure you have the correct access rights and the repository exists.&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;</summary>
+    
+    
+    
+    <category term="技术" scheme="https://jieli-matrix.github.io/categories/%E6%8A%80%E6%9C%AF/"/>
+    
+    
+    <category term="Git" scheme="https://jieli-matrix.github.io/tags/Git/"/>
+    
+    <category term="SSH" scheme="https://jieli-matrix.github.io/tags/SSH/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>稀疏矩阵乘法——Julia实现</title>
+    <link href="https://jieli-matrix.github.io/sparsecsc/"/>
+    <id>https://jieli-matrix.github.io/sparsecsc/</id>
+    <published>2021-05-24T07:34:56.000Z</published>
+    <updated>2021-05-24T13:35:08.375Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;五月初关注到Julia社区的稀疏矩阵乘法的可逆运算项目，其目标是使用&lt;strong&gt;通用可逆语言&lt;/strong&gt;&lt;a href=&quot;https://github.com/GiggleLiu/NiLang.jl&quot;&gt;NiLang&lt;/a&gt;对稀疏矩阵乘法进行新的实现，借助NiLang自动微分框架使得稀疏矩阵乘法的反向传播、链式法则更自然地导出。&lt;br&gt;该项目的难度在于综合权衡稀疏矩阵&lt;strong&gt;乘法的高效性&lt;/strong&gt;与NiLang的语言特性（程序中每一步均&lt;strong&gt;可逆&lt;/strong&gt;，变量的分配与释放），在讨论NiLang的语言特性前，我们先考虑稀疏矩阵乘法的高效实现。&lt;br&gt;稀疏矩阵的特点在于其元素中有大量零元，因此在做稀疏矩阵与向量乘法速度很快；而这样的高效需要依托于其特殊的数据结构——在存储上，尽可能节约空间（省略0元）；在数据读取上，尽可能快。&lt;br&gt;本文结合Julia的SparseArrays对稀疏矩阵乘法的实现进行一些基本的讨论，其文章结构遵循：稀疏矩阵的数据结构–&amp;gt;稀疏矩阵乘法实现（矩阵-向量乘，共轭转置矩阵-向量乘）。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="技术" scheme="https://jieli-matrix.github.io/categories/%E6%8A%80%E6%9C%AF/"/>
+    
+    
+    <category term="数值计算" scheme="https://jieli-matrix.github.io/tags/%E6%95%B0%E5%80%BC%E8%AE%A1%E7%AE%97/"/>
+    
+    <category term="Julia" scheme="https://jieli-matrix.github.io/tags/Julia/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Unity项目构建为单独exe文件</title>
+    <link href="https://jieli-matrix.github.io/BuildUnityProjectIntoSingleExeFile/"/>
+    <id>https://jieli-matrix.github.io/BuildUnityProjectIntoSingleExeFile/</id>
+    <published>2021-04-18T03:50:56.000Z</published>
+    <updated>2021-04-18T16:08:25.266Z</updated>
+    
+    
+    <summary type="html">&lt;h2 id=&quot;SFX介绍&quot;&gt;&lt;a href=&quot;#SFX介绍&quot; class=&quot;headerlink&quot; title=&quot;SFX介绍&quot;&gt;&lt;/a&gt;SFX介绍&lt;/h2&gt;&lt;p&gt;我们在下载、安装软件或许会有这样的经历：解压后，在安装目录内点击exe文件，运行软件(游戏)；一般软件还会贴心地帮你新建快捷方式到桌面，这样只需要点击软件图标就可以运行。&lt;/p&gt;
+&lt;p&gt;虽然平时仅运行exe文件，但心思细腻的人或许会发现，软件的安装目录有其他文件夹，如资源文件夹、日志文件夹等等。因此看上去仅仅运行exe文件，但是其依赖于安装目录下的其余文件。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="游戏开发" scheme="https://jieli-matrix.github.io/categories/%E6%B8%B8%E6%88%8F%E5%BC%80%E5%8F%91/"/>
+    
+    
+    <category term="unity" scheme="https://jieli-matrix.github.io/tags/unity/"/>
+    
+    <category term="SFX" scheme="https://jieli-matrix.github.io/tags/SFX/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Unity游戏开发（一）：unity安装</title>
+    <link href="https://jieli-matrix.github.io/unity1/"/>
+    <id>https://jieli-matrix.github.io/unity1/</id>
+    <published>2021-04-14T14:08:31.000Z</published>
+    <updated>2021-04-19T10:47:49.607Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;这学期选修了数字孪生系统，需要借助unity游戏开发实现强化学习的demo，因此在这里记录unity环境部署与学习体会 (研究生课程全靠自学，听课就是听个关键词)。笔者的本机环境为windows，参考文档为&lt;a href=&quot;https://docs.unity3d.com/cn/2021.1/Manual/GettingStarted.html&quot;&gt;unity官方文档&lt;/a&gt;，参考慕课为&lt;a href=&quot;https://www.coursera.org/learn/unity-yinqing-youxi-kaifa/home/welcome&quot;&gt;unity游戏引擎开发基础&lt;/a&gt;。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="游戏开发" scheme="https://jieli-matrix.github.io/categories/%E6%B8%B8%E6%88%8F%E5%BC%80%E5%8F%91/"/>
+    
+    
+    <category term="unity" scheme="https://jieli-matrix.github.io/tags/unity/"/>
+    
+    <category term="tutorial" scheme="https://jieli-matrix.github.io/tags/tutorial/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>动态规划(一)：Exact Dynamic Programming</title>
+    <link href="https://jieli-matrix.github.io/dptheory/"/>
+    <id>https://jieli-matrix.github.io/dptheory/</id>
+    <published>2021-04-02T12:56:49.000Z</published>
+    <updated>2021-04-03T15:16:22.940Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;自实现&lt;a href=&quot;https://jieli-matrix.github.io/task/&quot;&gt;任务调度器&lt;/a&gt;之后，我心心念念想重温下动态规划。在本科阶段，我一直以为DP是一种写程序的技巧，只不过是简化递归运算量的实现。（最优子结构、阶段、状态听着太复杂了，所以我只要会能查表的递归就够了！）恰逢假期，我翻了下&lt;a href=&quot;http://www.athenasc.com/rlbook_athena.html&quot;&gt;Reinforcement Learning and Optimal Control&lt;/a&gt;讲解动态规划的部分，结合自己对于动力系统的理解，记录感悟于此。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="技术" scheme="https://jieli-matrix.github.io/categories/%E6%8A%80%E6%9C%AF/"/>
+    
+    
+    <category term="算法" scheme="https://jieli-matrix.github.io/tags/%E7%AE%97%E6%B3%95/"/>
+    
+    <category term="优化" scheme="https://jieli-matrix.github.io/tags/%E4%BC%98%E5%8C%96/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>任务调度器</title>
+    <link href="https://jieli-matrix.github.io/task/"/>
+    <id>https://jieli-matrix.github.io/task/</id>
+    <published>2021-03-30T10:38:26.000Z</published>
+    <updated>2021-03-30T14:46:44.013Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;又是新一周的《数字孪生系统》课堂，当我正昏昏欲睡时，前排的朋友回头戳我&lt;br&gt;“来，做道题清醒一下”&lt;br&gt;题面如下：&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="技术" scheme="https://jieli-matrix.github.io/categories/%E6%8A%80%E6%9C%AF/"/>
+    
+    
+    <category term="算法" scheme="https://jieli-matrix.github.io/tags/%E7%AE%97%E6%B3%95/"/>
+    
+    <category term="优化" scheme="https://jieli-matrix.github.io/tags/%E4%BC%98%E5%8C%96/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>回文数乘法之数学技巧优化</title>
+    <link href="https://jieli-matrix.github.io/palid/"/>
+    <id>https://jieli-matrix.github.io/palid/</id>
+    <published>2021-03-26T08:35:25.000Z</published>
+    <updated>2021-03-30T14:02:08.321Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;  这周《数字孪生系统》课上有道题目很有意思，记录下自己的优化方案与遇到的坑。&lt;br&gt;  定义如下回文数乘法：&lt;br&gt;  ABCDEF * n = FEDCBA，试举出所有满足回文数乘法的六位数。&lt;br&gt;  例子：&lt;br&gt;  100001 * 1 = 100001&lt;br&gt;  219978 * 4 = 879912&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="技术" scheme="https://jieli-matrix.github.io/categories/%E6%8A%80%E6%9C%AF/"/>
+    
+    
+    <category term="算法" scheme="https://jieli-matrix.github.io/tags/%E7%AE%97%E6%B3%95/"/>
+    
+    <category term="优化" scheme="https://jieli-matrix.github.io/tags/%E4%BC%98%E5%8C%96/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>paddleocr多平台使用</title>
+    <link href="https://jieli-matrix.github.io/OCR/"/>
+    <id>https://jieli-matrix.github.io/OCR/</id>
+    <published>2021-02-14T10:43:03.000Z</published>
+    <updated>2021-03-26T13:35:35.157Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;早在上学期就听说百度paddle开源了ocr模型，于是今天在帮爸爸打印文档时尝试了paddleocr，在这篇文章里记录下使用时遇到的问题。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="技术" scheme="https://jieli-matrix.github.io/categories/%E6%8A%80%E6%9C%AF/"/>
+    
+    
+    <category term="paddle" scheme="https://jieli-matrix.github.io/tags/paddle/"/>
+    
+    <category term="ocr" scheme="https://jieli-matrix.github.io/tags/ocr/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Hexo+GitPages搭建</title>
+    <link href="https://jieli-matrix.github.io/HEXO/"/>
+    <id>https://jieli-matrix.github.io/HEXO/</id>
+    <published>2021-01-17T08:52:24.000Z</published>
+    <updated>2021-03-26T13:35:35.155Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;接上文，近日通过Hexo + GitPages第二次搭建个人主页的过程中，记录遇到的问题与解决方案。&lt;br&gt;本文主要的结构如下：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;介绍Hexo搭建本地博客基本流程&lt;/li&gt;
+&lt;li&gt;介绍GitPages开通与本地博客远端部署&lt;/li&gt;
+&lt;li&gt;探索Hexo基本框架&lt;br&gt;相比于初入Hexo框架时的自己，更希望能够对Hexo框架本身有更深的认识。此外，由于更换机器（目前由win切到mac）的可能性依然存在，因此也将博客源码进行托管。&lt;/li&gt;
+&lt;/ul&gt;</summary>
+    
+    
+    
+    <category term="技术" scheme="https://jieli-matrix.github.io/categories/%E6%8A%80%E6%9C%AF/"/>
+    
+    
+    <category term="Hexo" scheme="https://jieli-matrix.github.io/tags/Hexo/"/>
+    
+    <category term="Web" scheme="https://jieli-matrix.github.io/tags/Web/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>同一机器部署多个Github账号</title>
+    <link href="https://jieli-matrix.github.io/GithubKyes/"/>
+    <id>https://jieli-matrix.github.io/GithubKyes/</id>
+    <published>2021-01-16T08:27:20.000Z</published>
+    <updated>2021-03-26T13:35:35.138Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;近期由于记录需要，因此开通新博客用于个人技术积累与查阅。由于使用Github Pages静态托管服务，在进行ssh免密设置时，添加本机默认公钥id_rsa.pub遇到Github服务报错如下：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Key is already in use&lt;/p&gt;
+&lt;/blockquote&gt;</summary>
+    
+    
+    
+    <category term="技术" scheme="https://jieli-matrix.github.io/categories/%E6%8A%80%E6%9C%AF/"/>
+    
+    
+    <category term="Git" scheme="https://jieli-matrix.github.io/tags/Git/"/>
+    
+  </entry>
+  
+</feed>

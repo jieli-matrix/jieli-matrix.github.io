@@ -1,0 +1,547 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search>
+  <entry>
+    <title>同一机器部署多个Github账号</title>
+    <url>/GithubKyes/</url>
+    <content><![CDATA[<p>近期由于记录需要，因此开通新博客用于个人技术积累与查阅。由于使用Github Pages静态托管服务，在进行ssh免密设置时，添加本机默认公钥id_rsa.pub遇到Github服务报错如下：</p>
+<blockquote>
+<p>Key is already in use</p>
+</blockquote>
+<a id="more"></a>
+
+<h2 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h2><p>这一问题来源于Github的安全性机制考虑：</p>
+<blockquote>
+<p>出于对id_rsa.pub对应的私钥id_rsa的泄露安全性考虑,一个ssh-key只能配在一个单独的github账号（也即，同一个id_rsa.pub不能同时添加在user1和user2的github账号里）。因为一旦id_rsa私钥文件泄露，则所有作了免密的github账号都将被破解。</p>
+</blockquote>
+<p>更为细致的解释与批量Github账号管理，参考<a href="https://stackoverflow.com/questions/51221571/unable-to-add-ssh-key-in-github">stackoverflow</a>的解答（注册machine user，作为协作者可批量添加到多个账号中）。此处仅对两个账号的情况进行讨论。</p>
+<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>在解决方案中，涉及三步：</p>
+<ul>
+<li>生成相应公钥（本地）</li>
+<li>将公钥部署到相应账号（远端）</li>
+<li>配置不同账号作用域（本地）</li>
+</ul>
+<h3 id="生成相应公钥"><a href="#生成相应公钥" class="headerlink" title="生成相应公钥"></a>生成相应公钥</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">ssh-keygen -t rsa -C &quot;youremail&quot; -f &quot;username_rsa&quot;</span><br></pre></td></tr></table></figure>
+<p>ssh-keygen用于生成密钥，其中-t指定rsa算法（另一种不常用的算法为dsa），-C为注释用于指示不同账号，-f用于命名生成密钥文件名（避免覆盖原始机器id_rsa文件）。</p>
+<p>将username.pub文件添加到相应的github账号中。</p>
+<p>之后，需要在本地的~/.ssh目录下修改config文件，以添加账号配置信息（明确不同username使用的私钥文件）。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">Host siran.github.com</span><br><span class="line">        HostName github.com</span><br><span class="line">        IdentityFile ~/.ssh/siran_rsa</span><br><span class="line">        User siran</span><br><span class="line">Host yuran.github.com</span><br><span class="line">        HostName github.com</span><br><span class="line">        IdentityFile ~/.ssh/yuran_rsa</span><br><span class="line">        User yuran        </span><br></pre></td></tr></table></figure>
+<p>其中，不同字段的含义如下：</p>
+<figure class="highlight md"><table><tr><td class="code"><pre><span class="line">Host：别名（用于区分不同账号信息）</span><br><span class="line">HostName：域名</span><br><span class="line">IdentityFile：私钥文件</span><br><span class="line">User：用户名</span><br></pre></td></tr></table></figure>
+<p>在终端进行测试</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">ssh -T git@siran.github.com</span><br><span class="line">ssh -T git@yuran.github.com</span><br></pre></td></tr></table></figure>
+<p>如能正确返回，则说明已配置成功。</p>
+<h3 id="配置不同账号作用域"><a href="#配置不同账号作用域" class="headerlink" title="配置不同账号作用域"></a>配置不同账号作用域</h3><p>由于在同一机器上配置了两个Github账号，因此每次在push操作时需要明确是哪个账号发起。<br>在只有机器上只使用一个账号时，我们一般倾向于使用git config -global进行全局配置；当使用多个账号时，我们则需要取消全局配置，对于每个仓库进行局部配置：</p>
+<p>取消全局配置</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">git config --global --unset user.name yourname</span><br><span class="line">git config --global --unset user.email youremail</span><br></pre></td></tr></table></figure>
+<p>进行局部配置</p>
+<p>在每个仓库内 进行局部配置</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">git config user.name yourname</span><br><span class="line">git config user.email yourname</span><br></pre></td></tr></table></figure>
+<p>设定仓库作用域</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> git remote rm origin</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> git remote add origin git@siran.github.com:siran/demo.git</span> </span><br></pre></td></tr></table></figure>
+<p>至此，已经完成相应仓库的用户配置。</p>
+<h3 id="关于windows系统的git用户管理"><a href="#关于windows系统的git用户管理" class="headerlink" title="关于windows系统的git用户管理"></a>关于windows系统的git用户管理</h3><p>上述方案从windonws切换到mac管理git用户无问题，但当从mac切换到windows对git用户管理则失效。其根本原因在于windows在初期配置了用户A的git credential信息</p>
+<blockquote>
+<p>Control Panel\User Accounts\Credential Manager </p>
+</blockquote>
+<p>打开控制面板，进入用户信息，查看证书管理会发现已配置了github与gitee的证书信息<br><img src="https://i.loli.net/2021/02/11/CkDdgmjqXTVf9J2.png" alt="cred.png"></p>
+<p>此时删除该证书，重新使用http方式clone仓库到本地，在推送时会弹出用户信息验证，即可顺利推送。</p>
+<p>通过查阅Git凭证存储的文档，Git通过凭证存储系统对用户信息进行管理，以下是常见选项：</p>
+<ul>
+<li>默认所有都不缓存。<br>每一次连接都会询问你的用户名和密码。</li>
+<li>“cache”模式<br>将凭证存放在内存中一段时间。 密码永远不会被存储在磁盘中，并且在15分钟后从内存中清除。</li>
+<li>“store”模式<br>凭证用明文的形式存放在磁盘中，并且永不过期。密码是以<strong>明文</strong>的方式存放。</li>
+<li>mac系统加密<br>“osxkeychain”模式，它会将凭证缓存到你系统用户的钥匙串中。这种方式将<strong>加密</strong>凭证存放在磁盘中，并且永不过期。</li>
+<li>windows<br>Git Credential Manager for Windows会将用户信息以证书形式存储到证书中，之后遇到Git身份验证都会最先从证书中读取已有用户信息。</li>
+</ul>
+<p>因此，在windows下建议使用cache模式，以避免多账号切换时带来的不必要麻烦。</p>
+]]></content>
+      <categories>
+        <category>技术</category>
+      </categories>
+      <tags>
+        <tag>Git</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Hexo+GitPages搭建</title>
+    <url>/HEXO/</url>
+    <content><![CDATA[<p>接上文，近日通过Hexo + GitPages第二次搭建个人主页的过程中，记录遇到的问题与解决方案。<br>本文主要的结构如下：</p>
+<ul>
+<li>介绍Hexo搭建本地博客基本流程</li>
+<li>介绍GitPages开通与本地博客远端部署</li>
+<li>探索Hexo基本框架<br>相比于初入Hexo框架时的自己，更希望能够对Hexo框架本身有更深的认识。此外，由于更换机器（目前由win切到mac）的可能性依然存在，因此也将博客源码进行托管。</li>
+</ul>
+<a id="more"></a>
+
+<h2 id="Hexo搭建本地博客"><a href="#Hexo搭建本地博客" class="headerlink" title="Hexo搭建本地博客"></a>Hexo搭建本地博客</h2><p>Hexo是一种简洁、易用、高效的博客框架，使用Markdown解析文章并生成为静态网页(html/css/javascript)。更具体而言，当你在博客根目录下运行hexo g时，其遍历source目录（存储markdown文档），建立索引，根据博客根目录下的config.yml文件与themes目录下的config.yml文件生成静态页面(html/css/javascript)到public文件夹下。</p>
+<p>对我而言，Hexo框架最方便的地方在于，作为用户可以专注于内容创作本身（掌握markdown文档的书写），而无需考虑为生成美观页面（由Hexo丰富的theme提供）从零写起前端代码。所以，接下来一起看看如何迈出第一步：在本地搭建一个博客吧～</p>
+<h3 id="Node-js安装及包管理"><a href="#Node-js安装及包管理" class="headerlink" title="Node.js安装及包管理"></a>Node.js安装及包管理</h3><p>Node.js是一个基于Chrome JavaScript运行时建立的一个平台，通过JavaScript语言开发web服务端。Node.js通过npm进行包管理（解决包之间的依赖问题），Hexo依赖于Node.js（通过Node.js平台进行页面生成），可由npm进行安装。</p>
+<p>Node.js的安装方式有两种：官网下载或通过系统包管理(mac的brew或ubuntu的apt)。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">brew install node</span><br><span class="line">node -v</span><br><span class="line">npm -v #安装node后自带npm包管理</span><br></pre></td></tr></table></figure>
+<p>但对于不同场景，Node.js的版本可能会导致兼容问题，因此建议安装n(或nvm)对Node.js的版本进行管理（有点套娃的意思hhh）。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">sudo npm cache clean -f</span><br><span class="line">sudo npm install -g n</span><br><span class="line">sudo n 12.14.1 #12.14.1为需要安装的node版本号</span><br><span class="line">sudo npm install npm@latest -g #更新npm包管理 </span><br></pre></td></tr></table></figure>
+<h3 id="Hexo安装"><a href="#Hexo安装" class="headerlink" title="Hexo安装"></a>Hexo安装</h3><p>在搭建好Node.js环境后，通过npm安装Hexo</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">npm install hexo-cli -g</span><br></pre></td></tr></table></figure>
+<p>之后，新建文件夹site用于存储博客文件。在site根目录下，运行如下命令</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">hexo init blog</span><br></pre></td></tr></table></figure>
+<p>hexo init初始化blog文件夹用于存储其生成的静态网站，接下来，我们进行本地博客的生成与部署：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">cd blog # 之后的hexo命令，其都在blog文件夹作用域下</span><br><span class="line">hexo g # 静态网页生成(public文件夹生成)</span><br><span class="line">hexo s # 部署到localhost:4000</span><br></pre></td></tr></table></figure>
+<p>此时，我们访问<a href="http://localhost:4000，即可看到默认博客。">http://localhost:4000，即可看到默认博客。</a></p>
+<h2 id="GitPages开通与博客部署"><a href="#GitPages开通与博客部署" class="headerlink" title="GitPages开通与博客部署"></a>GitPages开通与博客部署</h2><p>考虑到开通博客的需求“可随时/多设备访问的笔记本”，因此需要将本地博客推送到GitPages上。<br>GitPages提供静态网页托管服务，其开通流程如下：</p>
+<ul>
+<li>登陆Github账号，使用UserName新建同名仓库:UserName.github.io(对于Gitee，则仓库名与UserName同名)</li>
+<li>默认分支为main，获取其http clone<br>如成果创建，可进入仓库的setting/GitHub Pages看到如下提示信息</li>
+</ul>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">Your site is published at https://username.github.io/</span><br></pre></td></tr></table></figure>
+<p>此时，回到本地博客blog目录下，打开根目录下的config文件，写入如下配置即可：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> Deployment</span></span><br><span class="line"><span class="meta">#</span><span class="bash"><span class="comment"># Docs: https://hexo.io/docs/one-command-deployment</span></span></span><br><span class="line">deploy:</span><br><span class="line">- type: git</span><br><span class="line">  repo: https://github.com/UserName/UserName.github.io.git</span><br><span class="line">  branch: main</span><br><span class="line">- type: git</span><br><span class="line">  repo: https://gitee.com/UserName/UserName.git</span><br><span class="line">  branch: main</span><br></pre></td></tr></table></figure>
+<p>此时，在终端执行如下命令：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">hexo clean</span><br><span class="line">hexo g</span><br><span class="line">hexo d</span><br></pre></td></tr></table></figure>
+<p>如看到部署成功的提示信息，则已完成。</p>
+<h3 id="源码备份"><a href="#源码备份" class="headerlink" title="源码备份"></a>源码备份</h3><p>一般而言，main分支用于存储静态网页(也即blog/public/文件夹内容)，并不存储site/文件夹内容。因此，为了避免因更换机器迁移博客，建议新建hexo分支，将本地源码push到hexo分支。git checkout hexo后即可对源码进行修改。</p>
+<h2 id="探索Hexo基本框架"><a href="#探索Hexo基本框架" class="headerlink" title="探索Hexo基本框架"></a>探索Hexo基本框架</h2><h3 id="hexo-init-blog过程"><a href="#hexo-init-blog过程" class="headerlink" title="hexo init blog过程"></a>hexo init blog过程</h3><p>初始化blog文件夹后，生成核心目录信息如下：</p>
+<ul>
+<li>config.yml</li>
+<li>node_modules/</li>
+<li>package.json</li>
+<li>scaffolds/</li>
+<li>source/</li>
+<li>themes/</li>
+</ul>
+<h4 id="config-yml"><a href="#config-yml" class="headerlink" title="config.yml"></a>config.yml</h4><p>blog根目录下配置文件，主要包含站点信息、主题配置、插件文件配置、部署配置。<br>站点信息配置：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> URL</span></span><br><span class="line"><span class="meta">#</span><span class="bash"><span class="comment"># If your site is put in a subdirectory, set url as &#x27;http://example.com/child&#x27; and root as &#x27;/child/&#x27;</span></span></span><br><span class="line">url: https://username.github.io/</span><br><span class="line">root: /</span><br></pre></td></tr></table></figure>
+<p>插件文件配置：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> sitemap</span></span><br><span class="line">sitemap:</span><br><span class="line">	path: sitemap.xml</span><br><span class="line">baidusitemap:</span><br><span class="line">	path: baidusitemap.xml</span><br></pre></td></tr></table></figure>
+<p>部署配置：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> Deployment</span></span><br><span class="line"><span class="meta">#</span><span class="bash"><span class="comment"># Docs: https://hexo.io/docs/one-command-deployment</span></span></span><br><span class="line">deploy:</span><br><span class="line">- type: git</span><br><span class="line">  repo: https://github.com/UserName/UserName.github.io.git</span><br><span class="line">  branch: main</span><br><span class="line">- type: git</span><br><span class="line">  repo: https://gitee.com/UserName/UserName.git</span><br><span class="line">  branch: main</span><br></pre></td></tr></table></figure>
+<p>注：在本地安装插件后，如在部署端未能生效，可以通过在config.yml文件中添加如下字段解决：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">plugins:</span><br><span class="line">  hexo-generator-feed</span><br><span class="line">  hexo-generator-searchdb</span><br><span class="line">  hexo-generator-sitemap</span><br><span class="line">  hexo-generator-baidu-sitemap</span><br></pre></td></tr></table></figure>
+<h4 id="node-modules"><a href="#node-modules" class="headerlink" title="node_modules"></a>node_modules</h4><p>node_modules是安装node后用来存放用包管理工具下载安装的包的文件夹，一般情况下不需要我们自己手动修改。</p>
+<h4 id="package-json"><a href="#package-json" class="headerlink" title="package.json"></a>package.json</h4><p>json文件，以字典形式存储依赖包的版本信息。</p>
+<h4 id="scafflods"><a href="#scafflods" class="headerlink" title="scafflods"></a>scafflods</h4><p>页面布局文件夹，其子目录包含三个文件：</p>
+<ul>
+<li>draft.md</li>
+<li>page.md</li>
+<li>post.md<br>分别代表draft, page和post三种页面样式。一般而言，如果在导航栏生成新页面，则应执行如下命令：<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">hexo new page tags</span><br></pre></td></tr></table></figure>
+默认情况下，生成post样式作为博文<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">hexo new daily #hexo new post daily</span><br></pre></td></tr></table></figure>
+创建的新文件，存储在source目录下。</li>
+</ul>
+<h4 id="source"><a href="#source" class="headerlink" title="source"></a>source</h4><p>资源文件夹存储md文件，source文件夹的子目录对于不同页面文件夹，默认文件夹为_post/文件夹，我们写作时只需在_post/文件夹内的相应md文件创作即可。</p>
+<h4 id="theme"><a href="#theme" class="headerlink" title="theme"></a>theme</h4><p>主题文件夹，可克隆多种喜欢主题，之后在config文件中设置对应主题即可。</p>
+<h3 id="hexo-g过程"><a href="#hexo-g过程" class="headerlink" title="hexo g过程"></a>hexo g过程</h3><h4 id="public"><a href="#public" class="headerlink" title="public"></a>public</h4><p>在这一步中，hexo遍历source目录（存储markdown文档），建立索引，根据博客根目录下的config.yml文件与themes目录下的config.yml文件生成静态页面(html/css/javascript)到public文件夹下，同时生成db.json文件。<br>对于GitPages，其仅需要public文件夹里的内容，因此在main分支上仅自动部署public文件夹内容。网站实际根目录即为public目录。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>本篇博客记录了自己在重新部署hexo+gitpages遇到的问题，作为备忘以备日后查看。更重要的是，在这次部署中，更深入地了解到web的相关机制，对于hexo框架有了基本的认识。</p>
+<p>参考内容：</p>
+<p><a href="https://juejin.cn/post/6844904131266609165">彻底搞懂如何使用Hexo+GitHubPages搭建个人博客</a> 优质长文，推荐阅读<br><a href="https://www.zhihu.com/question/51588481">Hexo的原理是什么？</a>知乎提问，第二个回答十分精炼</p>
+]]></content>
+      <categories>
+        <category>技术</category>
+      </categories>
+      <tags>
+        <tag>Hexo</tag>
+        <tag>Web</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>paddleocr多平台使用</title>
+    <url>/OCR/</url>
+    <content><![CDATA[<p>早在上学期就听说百度paddle开源了ocr模型，于是今天在帮爸爸打印文档时尝试了paddleocr，在这篇文章里记录下使用时遇到的问题。</p>
+<a id="more"></a>
+
+<p>由于时间所限，所以仅通过pypi的paddleocr进行OCR识别。</p>
+<h2 id="windows平台"><a href="#windows平台" class="headerlink" title="windows平台"></a>windows平台</h2><p>根据官网的安装步骤，仅需要pip install “paddleocr&gt;=2.0.1”即可。但事实上，当这样安装后，在python终端内</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">from</span> paddleocr <span class="keyword">import</span> PaddleOCR</span><br></pre></td></tr></table></figure>
+<p>会出现报错”No module named ‘paddle’”<br>正确的安装思路如下</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">python3 -m pip install paddlepaddle-gpu==2.0.0 -i https://mirror.baidu.com/pypi/simple # gpu机器</span><br><span class="line">python3 -m pip install paddlepaddle==2.0.0 -i https://mirror.baidu.com/pypi/simple # cpu机器</span><br><span class="line">pip install &quot;paddleocr&gt;=2.0.1&quot;</span><br></pre></td></tr></table></figure>
+<p>再次进入python终端内</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">from</span> paddleocr <span class="keyword">import</span> PaddleOCR</span><br></pre></td></tr></table></figure>
+<p>会出现报错“conda环境下缺少geos_c.dll”，这说明缺少geos_c动态链接库，从该<a href="https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely">网址</a>上下载Shapely‑1.7.1‑cp39‑cp39‑win_amd64.whl，并更改后缀为rar，解压Shapely‑1.7.1‑cp39‑cp39‑win_amd64.rar文件，找到geos_c.dll文件，并复制到对应的conda环境Libary下。（以我的配置为例，为D:\opt\Miniconda3\envs\ocr\Library\bin）</p>
+<p>再次import PaddleOCR则正常，但运行时仍会报错“Initializing libiomp5md.dll, but found libiomp5md.dll already initialized”,这时候在python文件头写入如下设置</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> os os.environ[<span class="string">&#x27;KMP_DUPLICATE_LIB_OK&#x27;</span>]=<span class="string">&#x27;True&#x27;</span></span><br></pre></td></tr></table></figure>
+<p>就可以成功运行paddleocr啦~</p>
+<p>这里贴一个官网的调用示例：</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">from</span> paddleocr <span class="keyword">import</span> PaddleOCR,draw_ocr</span><br><span class="line"><span class="comment"># Paddleocr supports Chinese, English, French, German, Korean and Japanese.</span></span><br><span class="line"><span class="comment"># You can set the parameter `lang` as `ch`, `en`, `french`, `german`, `korean`, `japan`</span></span><br><span class="line"><span class="comment"># to switch the language model in order.</span></span><br><span class="line">ocr = PaddleOCR(use_angle_cls=<span class="literal">True</span>, lang=<span class="string">&#x27;en&#x27;</span>) <span class="comment"># need to run only once to download and load model into memory</span></span><br><span class="line">img_path = <span class="string">&#x27;PaddleOCR/doc/imgs_en/img_12.jpg&#x27;</span></span><br><span class="line">result = ocr.ocr(img_path, cls=<span class="literal">True</span>)</span><br><span class="line"><span class="keyword">for</span> line <span class="keyword">in</span> result:</span><br><span class="line">    print(line)</span><br></pre></td></tr></table></figure>
+<p>返回是list形式，按文本行（横排或竖排）返回，包含文本框位置，置信度和文字内容。</p>
+<h2 id="Linux平台"><a href="#Linux平台" class="headerlink" title="Linux平台"></a>Linux平台</h2><p>Linux平台下安装很简单，分别安装paddlepaddle和paddleocr即可。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">python3 -m pip install paddlepaddle-gpu==2.0.0 -i https://mirror.baidu.com/pypi/simple # gpu机器</span><br><span class="line">python3 -m pip install paddlepaddle==2.0.0 -i https://mirror.baidu.com/pypi/simple # cpu机器</span><br><span class="line">pip install &quot;paddleocr&gt;=2.0.1&quot;</span><br></pre></td></tr></table></figure>
+<p>补充：paddleocr的<a href="https://github.com/PaddlePaddle/PaddleOCR/blob/release/2.0/doc/doc_ch/whl.md">pypi安装文档</a>内容不够完全，windows或mac平台直接安装可能会出现较多报错，建议先看<a href="https://github.com/PaddlePaddle/PaddleOCR/blob/release/2.0/doc/doc_ch/installation.md">快速安装</a>文档。</p>
+<p>参考链接:<br><a href="https://www.cnblogs.com/xuanmanstein/p/13840670.html">缺少geos_c.dll文件</a><br><a href="https://blog.csdn.net/qq_45266796/article/details/109028605">OpenMP runtime have been linked into the program</a></p>
+]]></content>
+      <categories>
+        <category>技术</category>
+      </categories>
+      <tags>
+        <tag>paddle</tag>
+        <tag>ocr</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>回文数乘法之数学技巧优化</title>
+    <url>/palid/</url>
+    <content><![CDATA[<p>  这周《数字孪生系统》课上有道题目很有意思，记录下自己的优化方案与遇到的坑。<br>  定义如下回文数乘法：<br>  ABCDEF * n = FEDCBA，试举出所有满足回文数乘法的六位数。<br>  例子：<br>  100001 * 1 = 100001<br>  219978 * 4 = 879912</p>
+<a id="more"></a>
+<p>  思路：最简单的思路，自然是对ABCDEF每一位进行暴力枚举，然后对n从1-9进行判断，是否满足回文乘法的要求。粗暴估算下，复杂度为O(N^7)，其中N=10。<br>  当然，即使是暴力，也需要注意细节：A位和F位需要从1枚举，以保证ABCDEF和FEDCBA<strong>首位不为0</strong>，为合法的六位数。</p>
+<p>  那么，这个问题有优化的空间吗？<br>  我决定从约束条件入手，对搜索空间进行剪枝，仔细观察这个等式<br>  ABCDEF * n = FEDCBA<br>  进行如下拆分<br>  (ABC* 10^3 + DEF) * n = (FED * 10^3 + CBA)<br>  等式两边同时对10^3取余，得<br>  DEF * n \text{mod}(10^3) = CBA<br>  通过取余变换，我们便可以对搜索空间进行剪枝，其伪代码如下：<br>  <figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="comment"># i: def j: cba</span></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">100</span>, <span class="number">1000</span>):</span><br><span class="line">        <span class="keyword">for</span> n <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">1</span>,<span class="number">10</span>):</span><br><span class="line">            j = i * n % <span class="number">10</span>^<span class="number">3</span></span><br><span class="line">            store i,j,n</span><br></pre></td></tr></table></figure><br> 根据伪代码分析，改进后的复杂度为仅为O(N^4)，其中N=10，之后再对候选集里的元素进行回文乘法验证即可。这里我想强调的是，我从回文乘法的定义推导得到的取余式，是回文乘法数的<strong>必要条件</strong>，因此可以用于剪枝，如果是<strong>充分条件</strong>，过强的约束则可能错失部分可行解（运筹优化上头…）。<br>于是我开开心心的写好代码：</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">cal_palid</span>(<span class="params">sep</span>):</span></span><br><span class="line">    <span class="comment"># 通过剪枝计算候选集</span></span><br><span class="line">    cand_list = []</span><br><span class="line">    sep = sep</span><br><span class="line">    lo = <span class="built_in">int</span>(sep / <span class="number">10</span>)</span><br><span class="line">    hi = sep </span><br><span class="line">    <span class="comment"># i: DEF j: CBA</span></span><br><span class="line">    <span class="comment"># ABCDEF * n = FEDCBA</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(lo, hi):</span><br><span class="line">        <span class="keyword">for</span> n <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">1</span>,<span class="number">10</span>):</span><br><span class="line">            j = i * n % hi </span><br><span class="line">            <span class="keyword">if</span> j &gt; lo:</span><br><span class="line">                cand_list.append((i, j, n))</span><br><span class="line">    <span class="keyword">return</span> cand_list </span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">check_ans</span>(<span class="params">i, j, k</span>):</span></span><br><span class="line">    <span class="comment"># 利用回文乘法定义验证</span></span><br><span class="line">    abc_str = <span class="string">&#x27;&#x27;</span>.join(<span class="built_in">reversed</span>(<span class="built_in">str</span>(j)))</span><br><span class="line">    def_str = <span class="built_in">str</span>(i)</span><br><span class="line">    abcdef_str = abc_str + def_str</span><br><span class="line">    rev_abcdef_str = <span class="string">&#x27;&#x27;</span>.join(<span class="built_in">reversed</span>(abcdef_str))</span><br><span class="line">    abcdef = <span class="built_in">int</span>(abcdef_str)</span><br><span class="line">    rev_abcdef = <span class="built_in">int</span>(rev_abcdef_str)</span><br><span class="line">    <span class="keyword">if</span> abcdef * k == rev_abcdef:</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">True</span></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">False</span></span><br></pre></td></tr></table></figure>
+<p>输出了下合法回文数的个数，902，和旁边同学用暴力枚举的结果一样，看来是对的！<br>不过，且慢，真的对吗？</p>
+<ul>
+<li>1 i的枚举范围是100-999吗？</li>
+<li>2 j需要大于100吗？<br>仔细思考，取余变换后，合法六位数的约束条件是：</li>
+<li>1 ABC &gt; 100</li>
+<li>2 FED &gt; 100<br>然而，枚举的i代表DEF，从100开始枚举，则忽略了部分可行解，以100001为例，ABC=100，DEF=001，显然，1不在i枚举的范围内。<br>聪明的做法自然是，对FED从100-999进行枚举，然后转换成DEF，然后算出CBA的值，根据CBA求出ABC，判断ABC是否大于100，如果大于，则添加到候选集中。因此正确的剪枝函数如下：<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">cal_palid</span>(<span class="params">sep</span>):</span></span><br><span class="line">    cand_list = []</span><br><span class="line">    sep = sep</span><br><span class="line">    lo = <span class="built_in">int</span>(sep / <span class="number">10</span>)</span><br><span class="line">    hi = sep </span><br><span class="line">    <span class="comment"># i: FED j: CBA</span></span><br><span class="line">    <span class="comment"># rev_i: DEF rev_j: ABC</span></span><br><span class="line">    <span class="comment"># ABCDEF * n = FEDCBA</span></span><br><span class="line">    int_wd = <span class="built_in">len</span>(<span class="built_in">str</span>(sep)) - <span class="number">1</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(lo, hi):</span><br><span class="line">        <span class="keyword">for</span> n <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">1</span>,<span class="number">10</span>):</span><br><span class="line">            rev_i = int_reverse(i, int_wd)</span><br><span class="line">            j = rev_i * n % hi</span><br><span class="line">            rev_j = int_reverse(j, int_wd) </span><br><span class="line">            <span class="keyword">if</span> rev_j &gt;= lo:</span><br><span class="line">                cand_list.append((rev_j, rev_i, n))</span><br><span class="line">    <span class="keyword">return</span> cand_list</span><br></pre></td></tr></table></figure>
+这里又涉及到一个常见的代码基本功：如何实现数字反转？<br>最直观的想法，当然是先把数字变成字符串，然后对字符串进行反转。也有数学点的方法，模10取余法。复杂度差距不大，于是我改完了bug，开心地实现了int_reverse函数：<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">int_reverse</span>(<span class="params">num</span>):</span></span><br><span class="line">    num_str = <span class="built_in">str</span>(num)</span><br><span class="line">    revnum_str = <span class="string">&#x27;&#x27;</span>.join(<span class="built_in">reversed</span>(num_str))</span><br><span class="line">    revnum = <span class="built_in">int</span>(revnum_str) </span><br><span class="line">    <span class="keyword">return</span> revnum</span><br></pre></td></tr></table></figure>
+然后重新跑了一遍结果，发现变成了812。欸，为什么漏了可行解呢？<br>继续考虑100001这个例子，当算出j=1时，我们对CBA进行reverse，得到的结果是100吗？根据我实现的int_reverse来看，结果还是1！因为没有对0进行补齐！对于所有小于100的j，int_reverse的翻转结果ABC都是小于100的数，漏了可行解！<br>因此，需要对int_reverse进行修正，使用格式化字符串的思想：</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">int_reverse</span>(<span class="params">num, width</span>):</span></span><br><span class="line">    num_str = <span class="built_in">str</span>(num).zfill(width)</span><br><span class="line">    revnum_str = <span class="string">&#x27;&#x27;</span>.join(<span class="built_in">reversed</span>(num_str))</span><br><span class="line">    revnum = <span class="built_in">int</span>(revnum_str) </span><br><span class="line">    <span class="keyword">return</span> revnum</span><br></pre></td></tr></table></figure>
+<p>这样，int_reverse就能返回正确的结果，我又跑了一遍代码，还是902。（所以改了两遍bug等于没改bug？？？）</p>
+<p>当然，这道题目还提到八位数，应该如何考虑？其实很简单，还是对半分，而且我也不需要重新写个八位数回文数乘法，只需要传入sep=10^4即可。<br>如果是奇数位的回文数乘法呢？这时候中心位的处理就较为麻烦，我的想法是在剪枝过程中对中心位不做限制，仅约束前后(n-1)/2位，最后在验证回文乘的时候对中心位进行枚举。<br>以下是该问题的全部代码，通过修改sep的值，即可实现偶位数的回文乘法。</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">int_reverse</span>(<span class="params">num, width</span>):</span></span><br><span class="line">    num_str = <span class="built_in">str</span>(num).zfill(width)</span><br><span class="line">    revnum_str = <span class="string">&#x27;&#x27;</span>.join(<span class="built_in">reversed</span>(num_str))</span><br><span class="line">    revnum = <span class="built_in">int</span>(revnum_str) </span><br><span class="line">    <span class="keyword">return</span> revnum</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">cal_palid</span>(<span class="params">sep</span>):</span></span><br><span class="line">    cand_list = []</span><br><span class="line">    sep = sep</span><br><span class="line">    lo = <span class="built_in">int</span>(sep / <span class="number">10</span>)</span><br><span class="line">    hi = sep </span><br><span class="line">    <span class="comment"># i: FED j: CBA</span></span><br><span class="line">    <span class="comment"># rev_i: DEF rev_j: ABC</span></span><br><span class="line">    <span class="comment"># ABCDEF * n = FEDCBA</span></span><br><span class="line">    int_wd = <span class="built_in">len</span>(<span class="built_in">str</span>(sep)) - <span class="number">1</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(lo, hi):</span><br><span class="line">        <span class="keyword">for</span> n <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">1</span>,<span class="number">10</span>):</span><br><span class="line">            rev_i = int_reverse(i, int_wd)</span><br><span class="line">            j = rev_i * n % hi</span><br><span class="line">            rev_j = int_reverse(j, int_wd) </span><br><span class="line">            <span class="keyword">if</span> rev_j &gt;= lo:</span><br><span class="line">                cand_list.append((rev_j, rev_i, n))</span><br><span class="line">    <span class="keyword">return</span> cand_list</span><br><span class="line">    </span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">check_ans</span>(<span class="params">rev_j, rev_i, k</span>):</span></span><br><span class="line">    <span class="comment"># calculate reverse str</span></span><br><span class="line">    abc_str = <span class="built_in">str</span>(rev_j)</span><br><span class="line">    def_str = <span class="built_in">str</span>(rev_i)</span><br><span class="line">    abcdef_str = abc_str + def_str</span><br><span class="line">    rev_abcdef_str = <span class="string">&#x27;&#x27;</span>.join(<span class="built_in">reversed</span>(abcdef_str))</span><br><span class="line">    </span><br><span class="line">    abcdef = <span class="built_in">int</span>(abcdef_str)</span><br><span class="line">    rev_abcdef = <span class="built_in">int</span>(rev_abcdef_str)</span><br><span class="line">    <span class="keyword">if</span> abcdef * k == rev_abcdef:</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">True</span></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">False</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">recon_palid</span>(<span class="params">cand_list</span>):</span></span><br><span class="line">    ans_list = []</span><br><span class="line">    <span class="keyword">for</span> item <span class="keyword">in</span> cand_list:</span><br><span class="line">        rev_j, i, k = item </span><br><span class="line">        <span class="keyword">if</span> check_ans(*item):</span><br><span class="line">            ans_list.append(item)</span><br><span class="line">    <span class="keyword">return</span> ans_list</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&#x27;__main__&#x27;</span>:</span><br><span class="line">    sep = <span class="number">10000</span></span><br><span class="line">    cand_list = cal_palid(sep)</span><br><span class="line">    ans_list = recon_palid(cand_list)</span><br><span class="line">    int_wd = <span class="built_in">len</span>(<span class="built_in">str</span>(sep)) - <span class="number">1</span></span><br><span class="line">    <span class="keyword">for</span> item <span class="keyword">in</span> ans_list:</span><br><span class="line">        rev_j, rev_i, k = item</span><br><span class="line">        item = (<span class="built_in">str</span>(rev_j), <span class="built_in">str</span>(rev_i).zfill(int_wd), k)</span><br><span class="line">        print(item)</span><br></pre></td></tr></table></figure>
+<p>当然，如果是短时间内骗分的话，最快的思路当然是把这道题退化成求回文数…回文数就是回文数乘法的充分条件…因为回文数乘1还是它本身…</p>
+<p>最后，是一些题外话。其实我之前是很烦看OJ题的，因为我一直觉得除了为了应付找工作面视，没什么意义。我其实也不太擅长数据结构与算法，因为我也不知道这能用在哪。但最近看了<a href="https://zhuanlan.zhihu.com/p/356155386">华为21软挑赛题</a>（我当然是没空参加…），尽管购买服务器与虚拟机分配都可以用线性规划去解（实现迁移），从数学建模角度来说，非常容易；但真正去实现这个系统的调度，涉及到虚拟机类、服务器类、调度类的交互，以及如果线性规划问题没有解，还需要实现一套贪心算法，通过对资源容量排序返回最富余的机器，这个过程中涉及增删改查，高效的操作离不开底层的数据结构。不过有人可能会说，这个交给工程师去做就好了，数学系的操心算法就好…然而我的过往经验是，与其让别人实现还不如自己实现，因为工程师可能觉得你就在纸上谈兵…</p>
+]]></content>
+      <categories>
+        <category>技术</category>
+      </categories>
+      <tags>
+        <tag>算法</tag>
+        <tag>优化</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>任务调度器</title>
+    <url>/task/</url>
+    <content><![CDATA[<p>又是新一周的《数字孪生系统》课堂，当我正昏昏欲睡时，前排的朋友回头戳我<br>“来，做道题清醒一下”<br>题面如下：</p>
+<a id="more"></a>
+<blockquote>
+<p>给你一个用字符数组 tasks 表示的 CPU 需要执行的任务列表。其中每个字母表示一种不同种类的任务。任务可以以任意顺序执行，并且每个任务都可以在 1 个单位时间内执行完。在任何一个单位时间，CPU 可以完成一个任务，或者处于待命状态。<br>然而，两个 相同种类 的任务之间必须有长度为整数 n 的冷却时间，因此至少有连续 n 个单位时间内 CPU 在执行不同的任务，或者在待命状态。</p>
+</blockquote>
+<blockquote>
+<p>你需要计算完成所有任务所需要的 最短时间 。<br>示例 1：<br>输入：tasks = [“A”,”A”,”A”,”B”,”B”,”B”], n = 2<br>输出：8<br>解释：A -&gt; B -&gt; (待命) -&gt; A -&gt; B -&gt; (待命) -&gt; A -&gt; B<br>     在本示例中，两个相同类型任务之间必须间隔长度为 n = 2 的冷却时间，而执行一个任务只需要一个单位时间，所以中间出现了（待命）状态。<br>示例 3：<br>输入：tasks = [“A”,”A”,”A”,”A”,”A”,”A”,”B”,”C”,”D”,”E”,”F”,”G”], n = 2<br>输出：16<br>解释：一种可能的解决方案是：<br>     A -&gt; B -&gt; C -&gt; A -&gt; D -&gt; E -&gt; A -&gt; F -&gt; G -&gt; A -&gt; (待命) -&gt; (待命) -&gt; A -&gt; (待命) -&gt; (待命) -&gt; A<br>来源：力扣（LeetCode）<br>链接：<a href="https://leetcode-cn.com/problems/task-scheduler">https://leetcode-cn.com/problems/task-scheduler</a></p>
+</blockquote>
+<p>我带着困惑读完题后，戳他“这题能做，但不敢保证是最短时间”<br>他说“你不觉得这个题目是个数学优化问题吗？”<br>我无奈“这能算数学优化么…再说这优化题我哪会解啊，满足约束后就贪心”<br>作为数学优化方向的研究生，那我们就从优化的角度来分析下这道题吧~<br>第一步，分析题意。问题的<strong>输入</strong>是task_list，其元素为若干可重复的大写英文字母；问题需要根据task_list求解action_list，action_list为CPU状态序列，其包含task_list所有元素与”sleep”，<strong>约束条件</strong>是action_list相同元素间的间隔必须大于n；问题<strong>目标</strong>为满足该约束的action_list的长度最小值。<br>显然这道题与连续优化无关…但我还是要把它放到运筹的框架下去分析…从理论上分析，我们可以根据task_list生成满足约束条件的所有可行解，然后从可行解中选取最优解。然而这实在不是一个好主意，因为可行解理论上来说是无穷的，比如让CPU长时间处于sleep状态，因此我们的目标转化为<strong>最小化CPU的sleep次数</strong>。<br>让我们换个视角来看CPU的action_list，把它视为一个动力系统，对于每一个CPU时刻，我们需要根据一个policy去决策CPU的状态M(sleep或任务态)。那么，这个policy应该如何制定呢？<br>我认为，policy分为两步：</p>
+<ul>
+<li>根据当前时刻的action_list和间隔范围n，对照task_list确定满足间隔约束的候选集</li>
+<li>查找候选集中，选择当前<strong>剩余任务数最大</strong>的任务作为CPU当前状态M；从直觉上来说，我们要尽可能使得剩余种类的任务数均匀，这样才能减少间隔约束出现的可能。<br>接下来，我们需要考虑边界条件。如果当前候选集为空，CPU状态则为”sleep”。需要考虑到的是，这里满足间隔约束的候选集，并不是当前状态真正的候选集，其必须满足<strong>该任务的余量大于0</strong>，如果该任务的余量小于0，那么CPU仍进入sleep</li>
+</ul>
+<p>数学的部分就到此结束啦（虽然我还不知道这求出来的是不是最小值…但我确定一定能给出满足约束的可行解…），接下来我们考虑问题的代码实现。<br>首先，我们需要知道，这个系统的终止时刻是什么？是task_list长度吗？显然不是，应该是action_list长度。action_list是动态增大的过程，那么action_list合适停止生长呢？应该是task_list剩余任务数为0时（你品，你细品，绝对不是task_list的长度）。<br>所以我们需要有个while循环，这个while循环的次数，是action_list的长度，也是最短的任务执行时间。<br>okay，这个问题的大框架我们就这样确定了：</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">action_list = []</span><br><span class="line"><span class="keyword">while</span> remain_tasks &gt; <span class="number">0</span>:</span><br><span class="line">    action = take_policy(action_list, n, task_list)</span><br><span class="line">    action_list.append(action)</span><br><span class="line">print(<span class="built_in">len</span>(action_list))</span><br></pre></td></tr></table></figure>
+<p>那么接下来，就涉及到如何维护remain_tasks和实施policy。我们分析一下需要的接口</p>
+<blockquote>
+<p>initial TaskManager from task_list<br>pop task from TaskManager into action_list<br>maintain remain_tasks from TaskManager<br>decide current state for action_list based on policy</p>
+</blockquote>
+<p>okay，那么看起来我们需要组织下TaskManager，这里我选择用python的dict作为其核心数据结构，前三点全部实现为TaskManager的类属性/方法，最后的决策过程我选择用函数来实现。</p>
+<p>TaskManager实现如下：</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">TaskManager</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self, task_lists</span>):</span></span><br><span class="line">        self.remain_tasks = <span class="built_in">len</span>(task_lists)</span><br><span class="line">        self.task_dict = <span class="built_in">dict</span>.fromkeys(task_lists, <span class="number">0</span>)</span><br><span class="line">        <span class="keyword">for</span> item <span class="keyword">in</span> task_lists:</span><br><span class="line">            self.task_dict[item] = self.task_dict[item] + <span class="number">1</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">pop_task</span>(<span class="params">self, task</span>):</span></span><br><span class="line">        <span class="keyword">if</span> self.task_dict[task] &gt; <span class="number">0</span>:</span><br><span class="line">            self.task_dict[task] = self.task_dict[task] - <span class="number">1</span></span><br><span class="line">            self.remain_tasks = self.remain_tasks - <span class="number">1</span></span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            <span class="keyword">raise</span> ValueError(<span class="string">&quot;Couldn&#x27;t pop from empty item!&quot;</span>)</span><br></pre></td></tr></table></figure>
+<p>decision_process过程实现如下：</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> operator</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">decision_process</span>(<span class="params">action_list, n, cpu_timer, TM</span>):</span></span><br><span class="line">    schedule_lo = <span class="built_in">max</span>(<span class="number">0</span>, cpu_timer - n)</span><br><span class="line">    schedule_hi = <span class="built_in">max</span>(<span class="number">0</span>, cpu_timer - <span class="number">1</span>) + <span class="number">1</span></span><br><span class="line">    block_set = <span class="built_in">set</span>(action_list[schedule_lo:schedule_hi])</span><br><span class="line">    <span class="comment"># generate cand_dict</span></span><br><span class="line">    cand_dict = &#123;&#125;</span><br><span class="line">    <span class="keyword">for</span> key,val <span class="keyword">in</span> TM.task_dict.items():</span><br><span class="line">        <span class="keyword">if</span> key <span class="keyword">in</span> block_set:</span><br><span class="line">            <span class="keyword">continue</span></span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            cand_dict[key] = val</span><br><span class="line">    <span class="comment"># decide action</span></span><br><span class="line">    action = <span class="string">&quot;sleep&quot;</span></span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">len</span>(cand_dict) == <span class="number">0</span>:</span><br><span class="line">        <span class="keyword">return</span> action</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        best_cand, best_val = <span class="built_in">max</span>(cand_dict.items(), key=operator.itemgetter(<span class="number">1</span>))</span><br><span class="line">        <span class="keyword">if</span> best_val == <span class="number">0</span>:</span><br><span class="line">            <span class="keyword">return</span> action</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            action = best_cand</span><br><span class="line">            TM.pop_task(action)</span><br><span class="line">            <span class="keyword">return</span> action</span><br></pre></td></tr></table></figure>
+<p>这里用了operator的itemgetter函数，用于获取对象对应维度的数据，以</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">best_cand, best_val = <span class="built_in">max</span>(cand_dict.items(), key=operator.itemgetter(<span class="number">1</span>))</span><br></pre></td></tr></table></figure>
+<p>为例，cand_dict.items()为(key,val)数据类型，operator.itemgetter(1)获取val作为函数变量，传递给max（大概这里可以理解成泛型）。<br>总调度过程如下：</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">schedule_process</span>(<span class="params">task_list, n</span>):</span></span><br><span class="line">    TM = TaskManager(task_list)</span><br><span class="line">    action_list = []</span><br><span class="line">    cpu_timer = <span class="number">0</span></span><br><span class="line">    <span class="keyword">while</span> TM.remain_tasks &gt; <span class="number">0</span>:</span><br><span class="line">        action = decision_process(action_list, n, cpu_timer, TM)</span><br><span class="line">        action_list.append(action)</span><br><span class="line">        cpu_timer = cpu_timer + <span class="number">1</span></span><br><span class="line">    <span class="keyword">return</span> action_list, cpu_timer</span><br></pre></td></tr></table></figure>
+<p>写个用例测试下：</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&#x27;__main__&#x27;</span>:</span><br><span class="line">    task_list = [<span class="string">&quot;A&quot;</span>,<span class="string">&quot;A&quot;</span>,<span class="string">&quot;A&quot;</span>,<span class="string">&quot;A&quot;</span>,<span class="string">&quot;A&quot;</span>,<span class="string">&quot;A&quot;</span>,<span class="string">&quot;B&quot;</span>,<span class="string">&quot;C&quot;</span>,<span class="string">&quot;D&quot;</span>,<span class="string">&quot;E&quot;</span>,<span class="string">&quot;F&quot;</span>,<span class="string">&quot;G&quot;</span>]</span><br><span class="line">    n = <span class="number">2</span></span><br><span class="line">    action_list, cpu_timer = schedule_process(task_list, n)</span><br><span class="line">    print(action_list)</span><br><span class="line">    print(cpu_timer)</span><br></pre></td></tr></table></figure>
+<p>输出为：</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">[<span class="string">&#x27;A&#x27;</span>, <span class="string">&#x27;B&#x27;</span>, <span class="string">&#x27;C&#x27;</span>, <span class="string">&#x27;A&#x27;</span>, <span class="string">&#x27;D&#x27;</span>, <span class="string">&#x27;E&#x27;</span>, <span class="string">&#x27;A&#x27;</span>, <span class="string">&#x27;F&#x27;</span>, <span class="string">&#x27;G&#x27;</span>, <span class="string">&#x27;A&#x27;</span>, <span class="string">&#x27;sleep&#x27;</span>, <span class="string">&#x27;sleep&#x27;</span>, <span class="string">&#x27;A&#x27;</span>, <span class="string">&#x27;sleep&#x27;</span>, <span class="string">&#x27;sleep&#x27;</span>, <span class="string">&#x27;A&#x27;</span>]</span><br><span class="line"><span class="number">16</span></span><br></pre></td></tr></table></figure>
+<p>关于这道题，我能想到的其他优化点，应该是确定候选集：这一步是可以充分利用上一步信息，在n很大的情形下，候选集每次最多更新两位（unique的删除最远位，增加最新位），这里可以维护个数据结构，记录的是当前cand_set里的元素及其距离当前cpu_timer最近的id，然后再根据两步移动来更新。不过题面写n&lt;100，我觉得就不用那么极致地追求优化了…</p>
+<p>虽然这只是一道普通算法题，但对我而言，这道题能否做出来并不重要，我在意的是用自己的思维体系与知识结构去解读、分析。这道题让我联想到这学期《强化学习》和旁听的《最优化理论》中的DP Process，每一步的state, action和policy是如何影响动力系统变化的。其实数学理论的动规很有意思（可惜我错过郦老师的第一节动规课了…），虽然我本人并没刷过计算机动态规划的题（手动笑哭），所以我也不保证这题贪心就对~<br>最后想吐槽下自己的python代码风格…我觉得写得很有c++的感觉…<br>附上完整代码：<br><a href="https://pastebin.ubuntu.com/p/M7sTDbNMMQ/">上课原始版代码</a>这是我在上课时云里雾里写的，当时设计的还要排序…后来跟前排的朋友讨论意识到应该重新设计下数据结构，max就够了。<br><a href="https://pastebin.ubuntu.com/p/VnTQmCFscv/">当前版本代码</a></p>
+]]></content>
+      <categories>
+        <category>技术</category>
+      </categories>
+      <tags>
+        <tag>算法</tag>
+        <tag>优化</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>动态规划(一)：Exact Dynamic Programming</title>
+    <url>/dptheory/</url>
+    <content><![CDATA[<p>自实现<a href="https://jieli-matrix.github.io/task/">任务调度器</a>之后，我心心念念想重温下动态规划。在本科阶段，我一直以为DP是一种写程序的技巧，只不过是简化递归运算量的实现。（最优子结构、阶段、状态听着太复杂了，所以我只要会能查表的递归就够了！）恰逢假期，我翻了下<a href="http://www.athenasc.com/rlbook_athena.html">Reinforcement Learning and Optimal Control</a>讲解动态规划的部分，结合自己对于动力系统的理解，记录感悟于此。</p>
+<a id="more"></a>
+<p>如果你去搜索“动态规划”，会看到很多教程给出动态规划定义：状态、阶段、最优子结构、递推关系，接下来会举斐波那契数列、走楼梯、最长公共子串的例子，来告诉你动态规划的高效。但往往对于具体问题，我对于如何设计状态、阶段仍十分茫然，甚至无法区分，更别提如何找到最优子结构了。</p>
+<p>其实，从我的观点来看，针对问题设计动规算法的关键在于，将这个问题背景建模为一个动力系统，通过分析动力系统的演化过程，构建序列决策，最后一步才是应用动规的后向算法去求解该系统的最优值，通过前向算法逐步算出最优解。</p>
+<p>因此，如果你能把一个优化问题抽象成离散时间动力系统的最优控制模型，那么我相信这个问题的动规求解是十分自然的。接下来，简要介绍下离散时间动力系统的最优控制模型。</p>
+<h2 id="Problem-Formulation"><a href="#Problem-Formulation" class="headerlink" title="Problem Formulation"></a>Problem Formulation</h2><p><strong>离散动力系统</strong>可以认为是一个随时间演化的系统$(\mathbb{X}, \mathbb{U}, n, \boldsymbol{F})$，其中$\mathbb{X}$是状态空间，$\mathbb{U}$是决策空间， $n \in \mathbb{Z}$是离散时间，$f_k:\mathbb{X} \times \mathbb{U} \rightarrow \mathbb{X}$是演化算子。给定初始状态$x_0 \in \mathbb{X}$，其未来状态的演化完全由$x_{n+1} = f_n(x_n, u_n)$决定(<strong>马尔可夫性</strong>);在每一个时刻$k$，离散系统定义了损失函数值$g_k(x_k, u_k)$，控制序列$(u_0,…,u_{N-1})$的损失函数$J(x_0;u_0,…,u_{N-1})$依如下定义：$J\left(x_{0} ; u_{0}, \ldots, u_{N-1}\right)=g_{N}\left(x_N\right)+\sum_{k=0}^{N-1} g_k\left(x_k, u_k\right)$</p>
+<p>其中，$g_N(x_N)$是预先定义终止状态的损失。所谓的<strong>最优控制</strong>即指，我们遍历所有可能的$(u_0,…,u_{N-1})$，使得$J(x_0;u_0,…,u_{N-1})$取得最小值。</p>
+<center><img src="https://i.loli.net/2021/04/03/QZvqnu9pe5wGgKX.png" width=60%></center>
+
+
+<p>针对上述优化问题，最朴素的想法，自然是穷举所有$(u_0,…,u_{N-1})$的组合(所有可行解)，一一比较得到最优值，这就是<strong>暴力穷举法</strong>；其次，可利用时间系统的演化，在每个时刻$t$，选择$u_{t}$使得$J(x_0;u_0,…,u_t)$最小，这就是<strong>贪心法</strong>。分析一下，暴力穷举法的空间复杂度为$O(UN)$，时间复杂度为$O(U^N)$，保证能够给出最优解；贪心法的空间复杂度为$O(N)$，时间复杂度为$O(UN)$，不一定能够给出最优解。一般而言，如果使用贪心求解优化问题，需要进行证明贪心解是最优解。(这里的$O$符号并不符合数学的严谨性…)</p>
+<h2 id="Dynamic-Programming"><a href="#Dynamic-Programming" class="headerlink" title="Dynamic Programming"></a>Dynamic Programming</h2><p>动态规划法的求解思路则不同于上述的暴力穷举法和贪心法，它很聪明地通过反向算法逐步<strong>缩小可行解</strong>(始终<strong>包含最优解</strong>)的范围，然后再通过前向算法从初始状态逐步选出最优控制序列。<br>因此，反向算法是动态规划的核心；上述的重要性质是由如下<strong>最优性法则</strong>保证</p>
+<p><img src="https://i.loli.net/2021/04/03/stMq5kfa7XnRbpm.png" alt="p7.png"></p>
+<h4 id="证明思路"><a href="#证明思路" class="headerlink" title="证明思路"></a>证明思路</h4><p>这个最优性定理的证明思路很容易，假设该子优化问题的解不是原优化问题解的子序列，那么我把子序列替换为该解，构造的新解则可以使子问题的目标函数下降，进而使得原问题的目标函数下降，矛盾。</p>
+<h4 id="Insight"><a href="#Insight" class="headerlink" title="Insight"></a>Insight</h4><p>我们观察下这个最优性定理，看看它告诉了我们什么</p>
+<ul>
+<li>如果我们知道$J_{k+1}^*(x_{k+1})$，当我们处于时刻$k$的最优状态$x_k^*$，可选择$u_k$作为最优决策，其使得$g(x_k^*,u_k) + J_{k+1}^*(f(x_k^*,u_k))$最小(<strong>前向传播</strong>)</li>
+<li>接下来，考虑$J_k^*(x_k)$的计算。对于前向传播过程，我们需要求解$\text{min}<em>{u_k \in U_k}J(x_k,u_k)$，从候选集$U_k$中选出最优的$u_k$表明我们计算和存储所有的$J</em>{k+1}^*(x_{k+1})$。(<strong>后向传播</strong>)</li>
+<li>相比于暴力穷举，动态规划在后向传播中的每一步把搜索空间从$J_k(x_k,u_k)$降低到$J_k^*(x_k) = \text{min}_{u_k \in U_k}J(x_k,u_k)$，这是<strong>动规的核心优势</strong>所在。</li>
+<li>根据马尔可夫性，后向传播在计算$J_k^*(x_k)$时，只需读$k+1$步的$J_{k+1}^*(x_{k+1})$，写入$J_k^*(x_k)$，求解最优值的空间复杂度为$O(2N)$；当然，如果要算最优解，那么所有的$J_k^*(x_k)$都需要存储用于查询。</li>
+</ul>
+<h3 id="算法"><a href="#算法" class="headerlink" title="算法"></a>算法</h3><p>基于以上分析，给出动态规划算法的计算步骤：<br><img src="https://i.loli.net/2021/04/03/Na3Pi9eH6xdQVJh.png" alt="p2.png"></p>
+<h2 id="应用分析"><a href="#应用分析" class="headerlink" title="应用分析"></a>应用分析</h2><p>通过上述的分析，我发现动规其实只是求解离散时间动力系统最优控制的一种优化方法，如果你愿意，可以类比为深度学习的梯度下降法；解决实际问题的难点往往在于如何抽象为动规的模型假设（如果是做科研，则可以考虑从实际问题中抽象出新的问题，比如加约束或扩展搜索空间，设计更高效的算法进行求解）。接下来会介绍一些有趣的例子，逐步抽象为可用动规解决的问题。</p>
+<h3 id="s-t最短路径模型"><a href="#s-t最短路径模型" class="headerlink" title="s-t最短路径模型"></a>s-t最短路径模型</h3><p>s-t最短路径问题我在运筹、数据结构、图论课都听过，但今天是以全新的观点来看它：离散动力系统的最优控制问题与s-t最短路径问题等价。</p>
+<center><img src="https://i.loli.net/2021/04/03/EMhGTjr4BfAz8wo.png" width=60%></center>
+
+<p>初始状态$x_0$对应s，添加人工终止状态结点$t$，则$g_N(x_N)$对应arcs($x_N$, t)的路径长；图的节点对应状态$x_k$，图的弧对应状态-控制$(x_k,u_k)$；以节点$x_k$开始的每个弧对应每个控制$u_k \in U_k(x_k)$并有终点$x_{k+1} = g_k(x_k,u_k)$；arc($x_k, u_k$)的路径长定义为$g_k(x_k,u_k)$。</p>
+<p>因此，对于任何一个deterministic finite-state system optimal control problem，都可以抽象成s-t最短路径问题；穷举法会枚举出所有路径，依次算出其长度；贪心法从s点出发，追求局部最优，可能从第一步就偏离了真正的最优路径；而动态规划则从t点开始反向传播，逐步缩小最优路径的搜索空间。<br>(第一次知道该模型，是在大二下的运筹学~)</p>
+<h3 id="旅行商-TSP-问题"><a href="#旅行商-TSP-问题" class="headerlink" title="旅行商(TSP)问题"></a>旅行商(TSP)问题</h3><p>旅行商问题(TSP)是这样一个问题：给定一系列城市和每对城市之间的距离，求解访问每一座城市一次并回到起始城市的最短回路。</p>
+<center><img src="https://i.loli.net/2021/04/03/LqAobi8KcyZBXpG.png" width=60%></center>
+
+<p>TSP问题可以如下建模：每个时刻$k$，旅行商已从起点城市A经过$k$个城市；在当前城市X，他可以根据转移矩阵选择下一个城市Y，其损失为len(arcs(X,Y))。因此该问题每个时刻$k$的状态为$k$长城市序列。</p>
+<p>观察发现，TSP问题的状态数随着城市数量N指数增长(即使是DP算法极其消耗内存)。<br>(第一次听说TSP问题也是运筹学，老师介绍说TSP是NP完全问题~)</p>
+<h3 id="单源最短路问题——Bellman-Ford算法"><a href="#单源最短路问题——Bellman-Ford算法" class="headerlink" title="单源最短路问题——Bellman-Ford算法"></a>单源最短路问题——Bellman-Ford算法</h3><p>单源最短路问题叙述如下：</p>
+<blockquote>
+<p>给定图节点${1,2,…,N,t}$，其中t是特殊的终止节点。令$a_{ij}$是从节点$i$到节点$j$的边长，单源最短路问题是指对于所有节点$i$，找到其到$t$的最短路径。</p>
+</blockquote>
+<p>这个问题与TSP问题均为路径问题，每个时刻$k$，从源起点$i$已经过$k$个节点；在当前节点$x_k$，可根据邻接矩阵选择下一个节点$x_{k+1}$。与TSP问题的不同之处在于，如果存在某个时刻$k$，使得$J_k^*(i) = J_{k+1}^*(i)$(以$i$开头)，则该$i$节点已找到最短路，如果对于所有$i$都成立，则停止算法。</p>
+<center><img src="https://i.loli.net/2021/04/03/IJV2mUQt19CpKNz.png" width=60%></center>
+
+<p>第一次听说Bellman-Ford算法还是运筹学（侧面说明李宪越老师对课程设计的用心良苦…），第二次在数据结构课上敲了代码，第三次在图论课上晕晕乎乎听老师证了一遍…</p>
+<h3 id="饮料供货问题——整数规划"><a href="#饮料供货问题——整数规划" class="headerlink" title="饮料供货问题——整数规划"></a>饮料供货问题——整数规划</h3><p>上面的例子都是经典的理论问题（本科没学明白的问题很想弄明白），我最近在课外书上翻到一道饮料供货问题，十分亲民：</p>
+<center><img src="https://i.loli.net/2021/04/03/I9Cap5rxyzU41DW.png" width=60%></center>
+
+<p>显然，这道是个整数规划问题。假设STC提供$n$种饮料，用$(S_i, V_i, C_i, H_i, B_i)$(对应饮料名字，容量，可购买量上限，满意度，实际购买量)表示第$i$种饮料(i=0,1,…,n-1)；基于上述表示，有：<br>饮料总购买量为$\sum_{i=0}^{n-1}(V_i \times B_i)$<br>总满意度为$\sum_{i=0}^{n-1}(H_i \times B_i)$<br>那么，在满足约束$\sum_{i=0}^{n-1}(V_i \times B_i)=V$的情形下，求解$\text{max}{\sum_{i=0}^{n-1}(H_i \times B_i)}$。</p>
+<p>列出这个优化式我静默了半分钟，开始回想整数规划的算法…发现全部还给李老师了…其实这才算是常见的动态规划题目，看似是组合优化问题，实则可以人为建模成逐步决策系统，利用动态规划去求解。<br>对于这个问题，我们构建这样的序列决策系统：对于每一个stage $i$，我们对第$i$种饮料进行购买，直到第$n-1$种饮料购买完成；每个状态$V_i$表示购买$(i,…,n-1)$种饮料后当前阶段剩余的容量；决策$B_i$则是通过购买$B_i \times C_i$升饮料， 从状态$V_i$转移到状态$V_{i+1}$。<br>对于这个具体问题，我们需要考虑边界问题。当状态$V_i=V$时，$J_k^*(V)$为0，最终的求解目标为$J_0^*(0)$。由于这是个求解最大化问题，因此所有$J_k(x_k)$都初始化为-INF。</p>
+<p>所以，其实整数规划通过恰当的阶段划分，也可以用动态规划来解。其实我觉得求导的链式法则也可以看成动态规划的！只不过对于每一步的搜索，离散寻优空间变为通过求导的连续寻优空间，本质都一样吧~</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>对于一般的问题需要构造出一串序列（只需要符合马尔可夫性，不完全要求时间的序关系），对应动规的<strong>阶段</strong>；对于系统的每个时间片，有若干可能的状态，对应动规的<strong>状态</strong>；而动态规划算法告诉我们，如果你想求这个序列$(x_0, x_1, …, x_N)$的最优值$J_0^*$，那么根据<strong>最优性原理</strong>，你应该求解$(x_k,…,x_N)$的最优值$J_k^*$，反向传播到$J_0^*$，这对应动规的<strong>最优子结构</strong>。一般而言，动态规划教程到这里就结束了，但对于数学里的DP优化算法，还需要通过<strong>前向传播</strong>，逐步求出最优控制序列$(u_1^*, u_2^*, …, u_N^*)$。</p>
+<h2 id="番外"><a href="#番外" class="headerlink" title="番外"></a>番外</h2><p>这里叙述的动态规划，其实只是数学优化理论中Dynamic Programming的冰山一角，它的准确名称是<strong>Deterministic</strong> Dynamic Programming Finite Optimal Control Problem，相对而言，是数学优化理论中最为平凡简单的情形。这里我倒是非常想提一下<strong>Stochastic</strong> Dynamic Programming Finite Optimal Control Problem，其求解的不再是选择序列$(u_0,…,u_{N-1})$，而是Policy序列$\pi = (\mu_0, …, \mu_{N-1})$，其中$u_k = \mu_k(x_k)$。$\mu_k$是个非常重要的映射，从这里可以引申到强化学习，Policy Iteration等等。<br>对于实际问题而言，难度在于建模成动态规划问题而不是应用动态规划算法。我个人以为符合马尔可夫性的离散动力系统/序列决策过程是个很好的建模思路，不过具体问题具体分析，这才是优化的魅力所在~</p>
+<h2 id="参考文献及致谢"><a href="#参考文献及致谢" class="headerlink" title="参考文献及致谢"></a>参考文献及致谢</h2><p><a href="https://web.mit.edu/dimitrib/www/RLbook.html">Reinforcement Learning and Optimal Control, Dimitri P.Bertsekas</a><br>FDU博士生课程《最优化理论》郦老师的PPT<br>LZU本科生课程《运筹学》李老师的课程设计（三年后的春天仍念念不忘当年的算法）<br>LZU本科生课程《数据结构》董老师的课程设计</p>
+]]></content>
+      <categories>
+        <category>技术</category>
+      </categories>
+      <tags>
+        <tag>算法</tag>
+        <tag>优化</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Unity游戏开发（一）：unity安装</title>
+    <url>/unity1/</url>
+    <content><![CDATA[<p>这学期选修了数字孪生系统，需要借助unity游戏开发实现强化学习的demo，因此在这里记录unity环境部署与学习体会 (研究生课程全靠自学，听课就是听个关键词)。笔者的本机环境为windows，参考文档为<a href="https://docs.unity3d.com/cn/2021.1/Manual/GettingStarted.html">unity官方文档</a>，参考慕课为<a href="https://www.coursera.org/learn/unity-yinqing-youxi-kaifa/home/welcome">unity游戏引擎开发基础</a>。</p>
+<a id="more"></a>
+
+<h2 id="Unity概述"><a href="#Unity概述" class="headerlink" title="Unity概述"></a>Unity概述</h2><p>Unity是一款2D/3D游戏引擎，用于多平台游戏开发(主流操作系统windows Linux Mac IOS Android以及任天堂、Xbox等游戏机)。一般而言，游戏开发是一个大型工程，需要美工、游戏策划、程序员与制作人的协作。  </p>
+<p>就个人编程体验而言，游戏开发可类比web开发：</p>
+<ul>
+<li>游戏场景设计 &lt;—&gt; UI设计</li>
+<li>游戏场景实现 &lt;—&gt; html + css</li>
+<li>游戏脚本(物体动作控制，C#编程实现) &lt;–&gt; javascript脚本</li>
+</ul>
+<p>当然，Unity在某些方面难度是高于Web开发的(虽然我也没玩过Vue开发…求W大佬们不喷)，我以为是需要一定物理学和光学常识：比如多个相机的摆放位置，视角切换，物体间的位置、角度与碰撞关系，让玩家感到身临其境并不容易。</p>
+<center><img src="https://unity.com/sites/default/files/styles/810_scale_width/public/2019-05/dynamicvehicles2%20%283%29.png?itok=uQ3g5btL" width=70%></center>
+<center><font size=2>炫酷unity场景</font></center>
+
+<p>作为一个不玩游戏的宅女，我口胡下好游戏应有的体验：</p>
+<ul>
+<li>精美的游戏页面（游戏场景设计）</li>
+<li>逼真的物理系统支持（游戏脚本与场景结合）</li>
+<li>绝佳音效（游戏脚本与场景结合）</li>
+<li>启动时间短，资源消耗合理范围(GTA5哈哈哈)</li>
+</ul>
+<p>如果有好游戏推荐，麻烦捎上我一起去网吧体验！</p>
+<h2 id="Unity安装"><a href="#Unity安装" class="headerlink" title="Unity安装"></a>Unity安装</h2><p>Unity推出了<a href="https://unity3d.com/cn/get-unity/download">Unity Hub</a>用于管理不同的Unity版本和项目，可以认为Unity Hub类似Anaconda，而Unity对应虚拟环境，彼此隔离方便Unity项目管理。<br>因此安装思路为，第一步下载<a href="https://unity3d.com/cn/get-unity/download">Unity Hub</a>，在Hub中安装对应版本的Unity，在Project中导入对应的项目文件。</p>
+<h3 id="UnityHub配置"><a href="#UnityHub配置" class="headerlink" title="UnityHub配置"></a>UnityHub配置</h3><p>由于Unity具有大量的场景资源、音效资源等等，非常占用存储，因此建议不将其路径安装在C盘。Unity Hub可更改Unity的存储路径</p>
+<center><img src="https://i.loli.net/2021/04/14/EWDXfLYFO9CMHUy.png" width=60%></center>
+
+<p>单击右上方的多边形，即可修改存储偏好(别问…问就是C盘爆红之后的大彻大悟)</p>
+<h3 id="Unity版本管理"><a href="#Unity版本管理" class="headerlink" title="Unity版本管理"></a>Unity版本管理</h3><p>配置好UnityHub之后，选择合适的Unity版本进行安装，退回到UnityHub主页面，从Installs选项卡中通过Add安装对应Unity版本</p>
+<center><img src="https://i.loli.net/2021/04/14/inL6cVR2rZjWHQa.png" width=60%></center>
+<center><font size=2>Unity Hub管理</font></center>
+
+<p>通过UnityHub安装Unity速度较慢，因此也可以通过官网下载<a href="https://unity3d.com/cn/get-unity/download/archive">Unity</a>，然后通过LOCATE导入到UnityHub。</p>
+<h4 id="Locate-Unity-Editor注意事项"><a href="#Locate-Unity-Editor注意事项" class="headerlink" title="Locate Unity Editor注意事项"></a>Locate Unity Editor注意事项</h4><p>由于通过UnityHub安装Unity速度较慢，因此我一般是通过官网下载Unity，再通过Locate定位到对应版本的unity.exe添加新版本。需要强调的是，打开<a href="https://unity3d.com/cn/get-unity/download/archive">Unity</a>官网后，一般有若干个下载选项：</p>
+<center><img src="https://i.loli.net/2021/04/18/V1tkLP5ovyhWOAN.png" width=70%></center>
+<center><font size=2>Unity Editor下载页面</font></center>
+
+<p>尽管从理论上而言，仅需要安装unity editor(64位或32位)，但考虑到项目的多平台部署需要安装对应的platform build，因此应下载第一个unity安装程序(unity editor不包含其他可选包，因此无法在多平台进行构建)。</p>
+<p>这一点很重要，因为我打算将项目在windows平台构建时，发现unity editor没有其他平台的构建方案（然后卸载该版本unity重新装了安装程序…）</p>
+<p>当然，在Unityhub下安装则会默认通过特定版本的Unity安装程序进行安装，并询问你可扩展包勾选哪些，在这两种情形下都请<strong>务必勾选构建平台所需支持(windows mac linux android)</strong></p>
+<center><img src="https://i.loli.net/2021/04/18/1AGymhMO95ZRBvC.png" width=50%></center>
+<center><font size=2>Unity平台支持务必勾选</font></center>
+
+<p>Unity的安装就暂时介绍到这，下一节会以一个基本项目为例，介绍Unity的开发界面。</p>
+]]></content>
+      <categories>
+        <category>游戏开发</category>
+      </categories>
+      <tags>
+        <tag>unity</tag>
+        <tag>tutorial</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Unity项目构建为单独exe文件</title>
+    <url>/BuildUnityProjectIntoSingleExeFile/</url>
+    <content><![CDATA[<h2 id="SFX介绍"><a href="#SFX介绍" class="headerlink" title="SFX介绍"></a>SFX介绍</h2><p>我们在下载、安装软件或许会有这样的经历：解压后，在安装目录内点击exe文件，运行软件(游戏)；一般软件还会贴心地帮你新建快捷方式到桌面，这样只需要点击软件图标就可以运行。</p>
+<p>虽然平时仅运行exe文件，但心思细腻的人或许会发现，软件的安装目录有其他文件夹，如资源文件夹、日志文件夹等等。因此看上去仅仅运行exe文件，但是其依赖于安装目录下的其余文件。</p>
+<a id="more"></a>
+
+<center><img src ="https://i.loli.net/2021/04/18/Fhm9XxVPJnbl7TI.png" width=50%></center>
+<center><font size=2>以Clash为例</font></center>
+
+<p>Unity构建出的游戏项目具有类似的文件夹结构，以《多米诺骨牌》项目结构为例</p>
+<center><img src="https://i.loli.net/2021/04/18/yXx5jTweWQ3YNlS.png" width=70%></center>
+<center><font size=2>多米诺骨牌项目目录</font></center>
+
+<p>其中domino.exe是项目构建生成的windows平台文件，其运行需要依赖domino_Data中的数据文件。对于这个简单的物理模拟游戏，我们希望其能够构建为一个单独的exe文件，不再需要依赖额外的数据文件。</p>
+<p>为解决上述问题，我们可以考虑将domino.exe与domino_Data打包到同一个归档文件；当我们赋予该归档文件可执行权限后，执行该文件，其能自动解压出依赖数据文件夹domino_Data，执行domino.exe，达到我们想要的效果。</p>
+<p>这里就不得不提到SFX (SelF-eXtracting archives)技术，自解压归档技术。著名的解压缩软件winrar与7zip都支持SFX，以下是winrar关于SFX的简介</p>
+<blockquote>
+<p>An SFX (SelF-eXtracting) archive is an archive, merged with an executable module, which is used to extract files from the archive when executed. Thus no external program is necessary to extract the contents of an SFX archive, it is enough to execute it. Nevertheless WinRAR can work with SFX archives as with any other archives, so if you do not want to run a received SFX archive (for example, because of possible viruses), you may use WinRAR to view or extract its contents.<br>SFX archives usually have .exe extension as any other executable file.</p>
+</blockquote>
+<p>非常有趣好玩的一点是，我们装了新系统之后第N件事是安装winrar，然而软件安装需要进行解压操作，然而我们又没有解压软件，这一点如何实现呢？其实winrar的安装包就是SFX格式，安装包可在无解压缩软件的系统上自行解压，避免了“鸡生蛋 蛋生鸡”的哲学问题。</p>
+<h2 id="通过winrar的sfx功能构建unity项目为单个exe文件"><a href="#通过winrar的sfx功能构建unity项目为单个exe文件" class="headerlink" title="通过winrar的sfx功能构建unity项目为单个exe文件"></a>通过winrar的sfx功能构建unity项目为单个exe文件</h2><p>接下来演示如何通过winrar的sfx功能将unity项目构建为单个exe文件  </p>
+<ul>
+<li><p>1 新建归档rar</p>
+<center><img src = "https://i.loli.net/2021/04/18/BDrbltnQ5dvLPY8.png" width=40%></center>
+</li>
+<li><p>2 将构建的exe文件与数据文件夹一同拖入rar</p>
+<center><img src = "https://i.loli.net/2021/04/18/toSqpLYgmx41iKI.png" width=40%></center>
+</li>
+<li><p>3 单击该rar，进入SFX高级选项设置并指定可执行文件名</p>
+<center><img src = "https://i.loli.net/2021/04/18/5uTLAObyrX1BUtn.png" width=40%></center>
+</li>
+<li><p>4 依次指定运行模式（临时文件、静默模式）、更新(提取与覆盖)以及给设置图标(可选)</p>
+<center><img src = "https://i.loli.net/2021/04/18/VbQwoilrnxX5Wmk.png" width=30%><img src="https://i.loli.net/2021/04/18/XvYam2CeUOldboQ.png" width=30%><img src="https://i.loli.net/2021/04/18/5EDHpfwx3n2aVU7.png" width=30%></center>
+
+</li>
+</ul>
+<p>然后把生成的exe文件放到非构建目录下去玩一玩~</p>
+<center><img src="https://i.loli.net/2021/04/18/ItmQWrSR54LoCVP.png" width=60%></center>
+<center><font size=2>我蛮喜欢这个企鹅的！</font></center>
+
+<center><img src="https://i.loli.net/2021/04/18/JTNKxAofd6VnCBW.png" width=30%><img src="https://i.loli.net/2021/04/18/oPQjE3gpOs6J8x4.png" width=30%></center>
+<center><font size=2>游戏页面，支持两种视角</font></center>
+
+<h2 id="胡思乱想"><a href="#胡思乱想" class="headerlink" title="胡思乱想"></a>胡思乱想</h2><p>最初只是为了打包unity文件，在折腾的过程中了解到了SFX技术，顺便思考了其来源（非常符合Linux下万物皆文件的思想）。紧接着我就产生了“邪恶”的念头：把恶意代码通过SFX打包到exe文件中，这样就可以进行恶意攻击呀！果不其然，我去查了下，发现还真有这么干的历史实例…所以从某些网站上下载软件时，最好还是不要立刻赋予管理员权限执行，而是先查看其文件结构，以及在沙盒运行~</p>
+]]></content>
+      <categories>
+        <category>游戏开发</category>
+      </categories>
+      <tags>
+        <tag>unity</tag>
+        <tag>SFX</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>稀疏矩阵乘法——Julia实现</title>
+    <url>/sparsecsc/</url>
+    <content><![CDATA[<p>五月初关注到Julia社区的稀疏矩阵乘法的可逆运算项目，其目标是使用<strong>通用可逆语言</strong><a href="https://github.com/GiggleLiu/NiLang.jl">NiLang</a>对稀疏矩阵乘法进行新的实现，借助NiLang自动微分框架使得稀疏矩阵乘法的反向传播、链式法则更自然地导出。<br>该项目的难度在于综合权衡稀疏矩阵<strong>乘法的高效性</strong>与NiLang的语言特性（程序中每一步均<strong>可逆</strong>，变量的分配与释放），在讨论NiLang的语言特性前，我们先考虑稀疏矩阵乘法的高效实现。<br>稀疏矩阵的特点在于其元素中有大量零元，因此在做稀疏矩阵与向量乘法速度很快；而这样的高效需要依托于其特殊的数据结构——在存储上，尽可能节约空间（省略0元）；在数据读取上，尽可能快。<br>本文结合Julia的SparseArrays对稀疏矩阵乘法的实现进行一些基本的讨论，其文章结构遵循：稀疏矩阵的数据结构–&gt;稀疏矩阵乘法实现（矩阵-向量乘，共轭转置矩阵-向量乘）。</p>
+<a id="more"></a>
+<h2 id="SparseCSC-稀疏列压缩存储"><a href="#SparseCSC-稀疏列压缩存储" class="headerlink" title="SparseCSC(稀疏列压缩存储)"></a>SparseCSC(稀疏列压缩存储)</h2><p>Julia按列优先进行数据存储，因此其稀疏矩阵的存储数据结构为稀疏列压缩存储，而python等行优先存储语言则可能使用SparseCSR进行行压缩存储。<br>对于一个$m \times n $矩阵<strong>M</strong>，其稀疏列压缩存储的形式为三个一维数组，分别记为<strong>V ROW_INDEX COL_INDEX</strong>,其分别存储如下信息</p>
+<ul>
+<li>V 存储<strong>M</strong>所有非零元(节约存储空间)</li>
+<li>ROW_INDEX 存储V中元素对应的矩阵<strong>M</strong>行坐标</li>
+<li>COL_INDEX 存储矩阵M的压缩列信息；具体而言，对于列数col，col_start = COL_INDEX[col], col_end =  COL_INDEX[col+1]。则V[col_start, col_end]所取元素则对应col列中的元素。这种存储方式，使得提取矩阵M的col列达到O(1)的复杂度，因此特别适用于列展开的矩阵乘法提速。</li>
+</ul>
+<p>上面的说明或许过于抽象，这里以python的SparseCSR实现示意图进行相应讲解（实在感慨于该图的生动形象）；首先将矩阵中的非零元数据按照行优先(对于SparseCSC则按照列优先)排序存储至data中，对于data中的每个元素，依次记录其列坐标对应至indices中的相应位置；最后在indptr中记录压缩行信息，其递推关系如下：</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">indptr[<span class="number">0</span>] = <span class="number">0</span> </span><br><span class="line">indptr[k+<span class="number">1</span>] = indptr[k] + cnt(row[k])</span><br></pre></td></tr></table></figure>
+<p><img src="https://i.stack.imgur.com/12bPL.png" alt="avatar"></p>
+<p>因此，如果indptr[k+1] != indptr[k]  （也即该列非零向量），则可以通过getindptr(A)[k]:(getindptr(A)[k+1] - 1)来获取原矩阵的第k行所有非零元素在data中对应的元素下标。如果说得更通俗些，indptr通过存储行元素的初始位置、末尾位置来压缩行元素的存储空间；对于SparseCSC同理，其通过压缩列元素的初始位置、末尾位置来压缩列元素的存储空间。</p>
+<h3 id="SparseArrays数据结构"><a href="#SparseArrays数据结构" class="headerlink" title="SparseArrays数据结构"></a>SparseArrays数据结构</h3><p>Julia对SparseCSC进行了相应的实现，其类声明如下</p>
+<figure class="highlight julia"><table><tr><td class="code"><pre><span class="line"><span class="keyword">struct</span> SparseMatrixCSC&#123;Tv,Ti&lt;:<span class="built_in">Integer</span>&#125; &lt;: AbstractSparseMatrix&#123;Tv,Ti&#125;</span><br><span class="line">    m::<span class="built_in">Int</span>                  <span class="comment"># Number of rows</span></span><br><span class="line">    n::<span class="built_in">Int</span>                  <span class="comment"># Number of columns</span></span><br><span class="line">    colptr::<span class="built_in">Vector</span>&#123;Ti&#125;      <span class="comment"># Column j is in colptr[j]:(colptr[j+1]-1)</span></span><br><span class="line">    rowval::<span class="built_in">Vector</span>&#123;Ti&#125;      <span class="comment"># Row indices of stored values</span></span><br><span class="line">    nzval::<span class="built_in">Vector</span>&#123;Tv&#125;       <span class="comment"># Stored values, typically nonzeros</span></span><br><span class="line"><span class="keyword">end</span></span><br></pre></td></tr></table></figure>
+<p>可以看到，nzval对应矩阵的非零元素；rowval对应非零元素的相应行坐标；colptr对应矩阵的列压缩（偏移信息）。我们可以看到，colptr使得访问稀疏矩阵的列元素非常简单快速，而访问稀疏矩阵的行会非常缓慢。这一点启发我们，在设计稀疏矩阵乘法时，<strong>应尽可能利用SparseCSC格式的列参与运算，而避免提取行参与运算</strong>。</p>
+<h2 id="稀疏矩阵乘法"><a href="#稀疏矩阵乘法" class="headerlink" title="稀疏矩阵乘法"></a>稀疏矩阵乘法</h2><p>在介绍稀疏矩阵乘法实现之前，我们先考虑一般性的矩阵乘法；</p>
+<h3 id="朴素矩阵乘法"><a href="#朴素矩阵乘法" class="headerlink" title="朴素矩阵乘法"></a>朴素矩阵乘法</h3><p>$AB$的朴素矩阵乘遵循如下法则：</p>
+<p>A按行展开：$A = (\vec a_1, \vec{a_2}, \dots, \vec{a_m})^T$<br>B按列展开：$B = \left(\boldsymbol{b_1}, \boldsymbol{b_2}, \dots, \boldsymbol{b_n}\right)$<br>内积计算$\vec{a_i} \boldsymbol{b_j} = \sum_{k=1}^{p} a_{i k} b_{k j}$</p>
+<p>矩阵的朴素乘法没有充分利用SIMD（单指令多数据流）的特性，同时行展开会造成缓存穿透，命中率低降低计算效率，因此我们从矩阵外积展开的角度考虑如何利用SIMD与列访问的缓存命中</p>
+<h3 id="矩阵外积展开"><a href="#矩阵外积展开" class="headerlink" title="矩阵外积展开"></a>矩阵外积展开</h3><p> $AB$的外积展开矩阵乘遵循如下法则：<br>$A$按列展开：$A = \left(\boldsymbol{a_1}, \boldsymbol{a_2}, \dots, \boldsymbol{a_k}\right)$<br>$B$按行展开：$B = \left(\vec{b_1}, \vec{b_2}, \dots, \vec{b_k}\right)^\mathrm{T}$<br>外积计算$\boldsymbol{a_i}\vec{b_j}$</p>
+<h2 id="Julia稀疏矩阵实现"><a href="#Julia稀疏矩阵实现" class="headerlink" title="Julia稀疏矩阵实现"></a>Julia稀疏矩阵实现</h2><h3 id="稀疏矩阵乘法-1"><a href="#稀疏矩阵乘法-1" class="headerlink" title="稀疏矩阵乘法"></a>稀疏矩阵乘法</h3><p>外积计算的每一步$\boldsymbol{a_i}\vec{b_j}$计算出完整的矩阵截面，k个截面相加即可得到完整的矩阵；然而在实际实现的过程中，每一个最小内部循环只能算出其中一行或一列向量，为了充分Julia的列优先存储原则，我们可以这样考虑：<br>对于out矩阵，最外层循环按列k进行计算；对于稀疏矩阵A，内层循环按其列col进行计算；最内层循环则对于固定的B[col,k]将其与矩阵A[row_idx, col]进行相乘，并将结果写入C[row_idx, k]；又C的元素应为所有A的列与B相乘元素加和，因此为+=运算；这样，在所有运算中，都是按列对矩阵进行提取，高效性得以保证。</p>
+<p>其对应代码如下：</p>
+<figure class="highlight julia"><table><tr><td class="code"><pre><span class="line"><span class="keyword">function</span> mul!(C::<span class="built_in">StridedVecOrMat</span>, A::AbstractSparseMatrixCSC, B::<span class="built_in">Union</span>&#123;<span class="built_in">StridedVector</span>,AdjOrTransStridedOrTriangularMatrix&#125;, α::<span class="built_in">Number</span>, β::<span class="built_in">Number</span>)</span><br><span class="line">    <span class="comment"># 矩阵size检测，是否抛出异常</span></span><br><span class="line">    size(A, <span class="number">2</span>) == size(B, <span class="number">1</span>) || throw(<span class="built_in">DimensionMismatch</span>())</span><br><span class="line">    size(A, <span class="number">1</span>) == size(C, <span class="number">1</span>) || throw(<span class="built_in">DimensionMismatch</span>())</span><br><span class="line">    size(B, <span class="number">2</span>) == size(C, <span class="number">2</span>) || throw(<span class="built_in">DimensionMismatch</span>())</span><br><span class="line">    <span class="comment"># A的非零值</span></span><br><span class="line">    nzv = nonzeros(A)</span><br><span class="line">    <span class="comment"># A的非零值行索引</span></span><br><span class="line">    rv = rowvals(A)</span><br><span class="line">    <span class="keyword">if</span> β != <span class="number">1</span></span><br><span class="line">        β != <span class="number">0</span> ? rmul!(C, β) : fill!(C, zero(eltype(C)))</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line">    <span class="comment"># 按列计算C的结果</span></span><br><span class="line">    <span class="keyword">for</span> k = <span class="number">1</span>:size(C, <span class="number">2</span>)</span><br><span class="line">        <span class="comment"># 按列对A进行抽取</span></span><br><span class="line">        <span class="meta">@inbounds</span> <span class="keyword">for</span> col = <span class="number">1</span>:size(A, <span class="number">2</span>)</span><br><span class="line">            <span class="comment"># 固定B[col,k]</span></span><br><span class="line">            αxj = B[col,k] * α</span><br><span class="line">            <span class="comment"># 稀疏矩阵快速乘 仅计算非零元的结果</span></span><br><span class="line">            <span class="keyword">for</span> j = getcolptr(A)[col]:(getcolptr(A)[col + <span class="number">1</span>] - <span class="number">1</span>)</span><br><span class="line">            <span class="comment"># 遍历col执行加和操作</span></span><br><span class="line">                C[rv[j], k] += nzv[j]*αxj</span><br><span class="line">            <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line">    C</span><br><span class="line"><span class="keyword">end</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="稀疏共轭转置矩阵乘法"><a href="#稀疏共轭转置矩阵乘法" class="headerlink" title="稀疏共轭转置矩阵乘法"></a>稀疏共轭转置矩阵乘法</h3><p>然而，尽管外积展开的计算方式能够加速计算，然而这种计算逻辑并不是刻板的，对于矩阵乘法而言，在保证计算结果正确的情形下，应以访存效率为第一优先级，以稀疏共轭转置矩阵乘法的实现为例</p>
+<figure class="highlight julia"><table><tr><td class="code"><pre><span class="line"><span class="keyword">function</span> mul!(C::<span class="built_in">StridedVecOrMat</span>, adjA::Adjoint&#123;&lt;:<span class="built_in">Any</span>,&lt;:AbstractSparseMatrixCSC&#125;, B::<span class="built_in">Union</span>&#123;<span class="built_in">StridedVector</span>,AdjOrTransStridedOrTriangularMatrix&#125;, α::<span class="built_in">Number</span>, β::<span class="built_in">Number</span>)</span><br><span class="line">    <span class="comment"># 共轭转置惰性计算</span></span><br><span class="line">    A = adjA.parent</span><br><span class="line">    size(A, <span class="number">2</span>) == size(C, <span class="number">1</span>) || throw(<span class="built_in">DimensionMismatch</span>())</span><br><span class="line">    size(A, <span class="number">1</span>) == size(B, <span class="number">1</span>) || throw(<span class="built_in">DimensionMismatch</span>())</span><br><span class="line">    size(B, <span class="number">2</span>) == size(C, <span class="number">2</span>) || throw(<span class="built_in">DimensionMismatch</span>())</span><br><span class="line">    <span class="comment"># 获取A的非零值</span></span><br><span class="line">    nzv = nonzeros(A)</span><br><span class="line">    <span class="comment"># 获取A的非零值所在行索引(对应共轭转置的列索引)</span></span><br><span class="line">    rv = rowvals(A)</span><br><span class="line">    <span class="keyword">if</span> β != <span class="number">1</span></span><br><span class="line">        β != <span class="number">0</span> ? rmul!(C, β) : fill!(C, zero(eltype(C)))</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line">    <span class="comment"># 按列计算C的输出结果</span></span><br><span class="line">    <span class="keyword">for</span> k = <span class="number">1</span>:size(C, <span class="number">2</span>)</span><br><span class="line">        <span class="comment"># 按列提取A的非零值（此时按行提取A共轭转置的非零值）</span></span><br><span class="line">        <span class="meta">@inbounds</span> <span class="keyword">for</span> col = <span class="number">1</span>:size(A, <span class="number">2</span>)</span><br><span class="line">            tmp = zero(eltype(C))</span><br><span class="line">            <span class="comment"># A共轭转置的行元素</span></span><br><span class="line">            <span class="keyword">for</span> j = getcolptr(A)[col]:(getcolptr(A)[col + <span class="number">1</span>] - <span class="number">1</span>)</span><br><span class="line">                <span class="comment"># 与B的对应元素列相乘</span></span><br><span class="line">                <span class="comment"># 引入tmp</span></span><br><span class="line">                tmp += adjoint(nzv[j])*B[rv[j],k]</span><br><span class="line">            <span class="keyword">end</span></span><br><span class="line">            C[col,k] += tmp * α</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line">    C</span><br><span class="line"><span class="keyword">end</span></span><br></pre></td></tr></table></figure>
+<p>显然，在做矩阵A的共轭转置与B相乘时，我们并不会真的在内存中创建A的共轭转置矩阵，而是采用<strong>惰性求值</strong>的思想，只有在A的共轭转置必须时，才会对其元素进行求共轭转置。<br>因此，这里我们仍使用A的元素，因此天然地得到被乘矩阵的行，进而使用朴素矩阵乘法；这里引入tmp也别有用意：如果直接用C[col,k]对tmp进行替换，则每一步都要乘以$\alpha$，增大了计算量。</p>
+<h2 id="Julia稀疏矩阵可逆计算"><a href="#Julia稀疏矩阵可逆计算" class="headerlink" title="Julia稀疏矩阵可逆计算"></a>Julia稀疏矩阵可逆计算</h2><p>GiggleLiu在他的<a href="https://nextjournal.com/giggle/how-to-write-a-program-differentiably">博客</a>中给出了使用NiLang进行稀疏矩阵乘法可逆计算的实现，如下</p>
+<figure class="highlight julia"><table><tr><td class="code"><pre><span class="line"><span class="keyword">using</span> NiLang</span><br><span class="line"><span class="keyword">using</span> SparseArrays: SparseMatrixCSC, AbstractSparseMatrix, nonzeros, rowvals, getcolptr</span><br><span class="line"></span><br><span class="line"><span class="meta">@i</span> <span class="keyword">function</span> mul!(C::<span class="built_in">StridedVecOrMat</span>, A::AbstractSparseMatrix, B::<span class="built_in">StridedVector</span>&#123;T&#125;, α::<span class="built_in">Number</span>, β::<span class="built_in">Number</span>) <span class="keyword">where</span> T</span><br><span class="line">    <span class="meta">@safe</span> size(A, <span class="number">2</span>) == size(B, <span class="number">1</span>) || throw(<span class="built_in">DimensionMismatch</span>())</span><br><span class="line">    <span class="meta">@safe</span> size(A, <span class="number">1</span>) == size(C, <span class="number">1</span>) || throw(<span class="built_in">DimensionMismatch</span>())</span><br><span class="line">    <span class="meta">@safe</span> size(B, <span class="number">2</span>) == size(C, <span class="number">2</span>) || throw(<span class="built_in">DimensionMismatch</span>())</span><br><span class="line">    nzv ← nonzeros(A)</span><br><span class="line">    rv ← rowvals(A)</span><br><span class="line">    <span class="keyword">if</span> (β != <span class="number">1</span>, ~)</span><br><span class="line">        <span class="meta">@safe</span> error(<span class="string">&quot;only β = 1 is supported, got β = <span class="subst">$(β)</span>.&quot;</span>)</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line">    <span class="comment"># Here, we close the reversibility check inside the loop to increase performance</span></span><br><span class="line">    <span class="meta">@invcheckoff</span> <span class="keyword">for</span> k = <span class="number">1</span>:size(C, <span class="number">2</span>)</span><br><span class="line">        <span class="meta">@inbounds</span> <span class="keyword">for</span> col = <span class="number">1</span>:size(A, <span class="number">2</span>)</span><br><span class="line">            αxj ← zero(T)</span><br><span class="line">            αxj += B[col,k] * α</span><br><span class="line">            <span class="keyword">for</span> j = getcolptr(A)[col]:(getcolptr(A)[col + <span class="number">1</span>] - <span class="number">1</span>)</span><br><span class="line">                C[rv[j], k] += nzv[j]*αxj</span><br><span class="line">            <span class="keyword">end</span></span><br><span class="line">            αxj -= B[col,k] * α</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"><span class="keyword">end</span></span><br></pre></td></tr></table></figure>
+<p>对于可逆计算，此处不做过多介绍（因为我也只懂皮毛…具体可以参考NiLang的<a href="https://github.com/GiggleLiu/NiLang.jl">官方文档</a>、<a href="https://arxiv.org/abs/2003.04617">论文</a>与GiggleLiu的<a href="https://zhuanlan.zhihu.com/p/191845544">知乎</a>），这里重点提两个必须遵循的编程范例</p>
+<ul>
+<li><strong>所有操作必须可逆；</strong> 常见的可逆运算有+= $\rightarrow$ $\leftarrow$等，但是*=不可逆（因为零元的存在，导致无法推断）；当然if语句通过if (precond, aftercond)也同样能够实现可逆；while for控制块也根据末态实现了相应的可逆机制</li>
+<li><strong>操作解耦；</strong> 尽可能地操作解耦，比如不要出现adjoint(nzv[j])，复合运算会导致NiLang无法推断，因此你可能需要先分配变量，之后再释放</li>
+</ul>
+<h3 id="实现中遇到的问题"><a href="#实现中遇到的问题" class="headerlink" title="实现中遇到的问题"></a>实现中遇到的问题</h3><p>我自然也想动手实现下稀疏矩阵乘法的可逆计算，那么先立个小目标实现个共轭转置的计算吧，给出代码如下</p>
+<figure class="highlight julia"><table><tr><td class="code"><pre><span class="line"><span class="keyword">using</span> NiLang</span><br><span class="line"><span class="keyword">using</span> SparseArrays: SparseMatrixCSC, AbstractSparseMatrix, nonzeros, rowvals, getcolptr, Adjoint, AbstractSparseMatrixCSC</span><br><span class="line"></span><br><span class="line"><span class="meta">@i</span> <span class="keyword">function</span> mymul!(C::<span class="built_in">StridedVecOrMat</span>, adjA::Adjoint&#123;&lt;:<span class="built_in">Any</span>,&lt;:AbstractSparseMatrixCSC&#125;, B::<span class="built_in">StridedVector</span>&#123;T&#125;, α::<span class="built_in">Number</span>, β::<span class="built_in">Number</span>) <span class="keyword">where</span> T</span><br><span class="line">    A ← adjA.parent</span><br><span class="line">    <span class="meta">@safe</span> size(A, <span class="number">2</span>) == size(C, <span class="number">1</span>) || throw(<span class="built_in">DimensionMismatch</span>())</span><br><span class="line">    <span class="meta">@safe</span> size(A, <span class="number">1</span>) == size(B, <span class="number">1</span>) || throw(<span class="built_in">DimensionMismatch</span>())</span><br><span class="line">    <span class="meta">@safe</span> size(B, <span class="number">2</span>) == size(C, <span class="number">2</span>) || throw(<span class="built_in">DimensionMismatch</span>())</span><br><span class="line">    nzv ← nonzeros(A)</span><br><span class="line">    rv ← rowvals(A)</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span> (β != <span class="number">1</span>, ~)</span><br><span class="line">        <span class="meta">@safe</span> error(<span class="string">&quot;only β = 1 is supported, got β = <span class="subst">$(β)</span>.&quot;</span>)</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line">    <span class="comment"># Here, we close the reversibility check inside the loop to increase performance</span></span><br><span class="line">    <span class="meta">@invcheckoff</span> <span class="keyword">for</span> k = <span class="number">1</span>:size(C, <span class="number">2</span>)</span><br><span class="line">        <span class="meta">@inbounds</span> <span class="keyword">for</span> col = <span class="number">1</span>:size(A, <span class="number">2</span>)</span><br><span class="line">            tmp ← zero(T)</span><br><span class="line">            <span class="keyword">for</span> j = getcolptr(A)[col]:(getcolptr(A)[col + <span class="number">1</span>] - <span class="number">1</span>)</span><br><span class="line">                tmprv ← zero(T)</span><br><span class="line">                tmprv += nzv[j]</span><br><span class="line">                tmprvad ← zero(T)</span><br><span class="line">                tmprvad += adjoint(tmprv)</span><br><span class="line">                tmp += tmprvad*B[rv[j],k]</span><br><span class="line">            <span class="keyword">end</span></span><br><span class="line">            C[col, k] += tmp * α</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"><span class="keyword">end</span></span><br></pre></td></tr></table></figure>
+<p>bechmark测试发现并没有原始方法的效率高…</p>
+<p>原始方法</p>
+<figure class="highlight julia"><table><tr><td class="code"><pre><span class="line"><span class="meta">@benchmark</span> SparseArrays.mul!($(copy(out)), $adjoint(sp1), $v, <span class="number">0.5</span>+<span class="number">0</span><span class="literal">im</span>, <span class="number">1</span>)</span><br><span class="line">BenchmarkTools.Trial: </span><br><span class="line">  memory estimate:  <span class="number">48</span> bytes</span><br><span class="line">  allocs estimate:  <span class="number">1</span></span><br><span class="line">  --------------</span><br><span class="line">  minimum time:     <span class="number">173.800</span> μs (<span class="number">0.00</span>% GC)</span><br><span class="line">  median time:      <span class="number">177.100</span> μs (<span class="number">0.00</span>% GC)</span><br><span class="line">  mean time:        <span class="number">198.213</span> μs (<span class="number">0.00</span>% GC)</span><br><span class="line">  maximum time:     <span class="number">1.782</span> ms (<span class="number">0.00</span>% GC)</span><br><span class="line">  --------------</span><br><span class="line">  samples:          <span class="number">10000</span></span><br><span class="line">  evals/sample:     <span class="number">1</span></span><br></pre></td></tr></table></figure>
+<p>可逆版本</p>
+<figure class="highlight julia"><table><tr><td class="code"><pre><span class="line">BenchmarkTools.Trial: </span><br><span class="line">  memory estimate:  <span class="number">144</span> bytes</span><br><span class="line">  allocs estimate:  <span class="number">2</span></span><br><span class="line">  --------------</span><br><span class="line">  minimum time:     <span class="number">241.200</span> μs (<span class="number">0.00</span>% GC)</span><br><span class="line">  median time:      <span class="number">246.500</span> μs (<span class="number">0.00</span>% GC)</span><br><span class="line">  mean time:        <span class="number">264.895</span> μs (<span class="number">0.00</span>% GC)</span><br><span class="line">  maximum time:     <span class="number">3.260</span> ms (<span class="number">0.00</span>% GC)</span><br><span class="line">  --------------</span><br><span class="line">  samples:          <span class="number">10000</span></span><br><span class="line">  evals/sample:     <span class="number">1</span></span><br></pre></td></tr></table></figure>
+<p>我猜测可能效率低下的原因在于<strong>内部循环创建临时变量</strong>的问题，但我似乎又觉得这些变量是必要的，为了遵循NiLang的可逆解耦原则。还希望可以得到大佬的指教~</p>
+<h3 id="Gvar的报错"><a href="#Gvar的报错" class="headerlink" title="Gvar的报错"></a>Gvar的报错</h3><p>虽然受到正向检测的重创，但我依然有勇气要让它接受梯度的检验，不妙的是，共轭转置乘法的检验似乎遇到了问题</p>
+<figure class="highlight julia"><table><tr><td class="code"><pre><span class="line"><span class="keyword">using</span> NiLang.AD</span><br><span class="line"><span class="meta">@benchmark</span> (~mymul!)($(GVar(copy(out))), $(GVar(adjoint(sp1))), $(GVar(v)), $(GVar(<span class="number">0.5</span>)), <span class="number">1</span>)</span><br><span class="line"></span><br><span class="line"><span class="built_in">MethodError</span>: no method matching (::Inv&#123;typeof(mymul!)&#125;)(::<span class="built_in">Vector</span>&#123;<span class="built_in">Complex</span>&#123;GVar&#123;<span class="built_in">Float64</span>, <span class="built_in">Float64</span>&#125;&#125;&#125;, ::SparseMatrixCSC&#123;<span class="built_in">Complex</span>&#123;GVar&#123;<span class="built_in">Float64</span>, <span class="built_in">Float64</span>&#125;&#125;, <span class="built_in">Int64</span>&#125;, ::<span class="built_in">Vector</span>&#123;<span class="built_in">Complex</span>&#123;GVar&#123;<span class="built_in">Float64</span>, <span class="built_in">Float64</span>&#125;&#125;&#125;, ::GVar&#123;<span class="built_in">Float64</span>, <span class="built_in">Float64</span>&#125;, ::<span class="built_in">Int64</span>)</span><br><span class="line">Closest candidates are:</span><br><span class="line">  (::Inv&#123;typeof(mymul!)&#125;)(::<span class="built_in">StridedVecOrMat</span>&#123;T&#125; <span class="keyword">where</span> T, ::Adjoint&#123;<span class="string">var&quot;#s34&quot;</span>, <span class="string">var&quot;#s33&quot;</span>&#125; <span class="keyword">where</span> &#123;<span class="string">var&quot;#s34&quot;</span>, <span class="string">var&quot;#s33&quot;</span>&lt;:AbstractSparseMatrixCSC&#125;, ::<span class="built_in">StridedVector</span>&#123;T&#125;, ::<span class="built_in">Number</span>, ::<span class="built_in">Number</span>) <span class="keyword">where</span> T at In[<span class="number">34</span>]:<span class="number">4</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>看起来，是没有匹配的方法，紧接着我对GVar进行了测试</p>
+<figure class="highlight julia"><table><tr><td class="code"><pre><span class="line"><span class="keyword">using</span> NiLang.AD: GVar, grad</span><br><span class="line">typeof(GVar(sp1))</span><br><span class="line">SparseMatrixCSC&#123;<span class="built_in">Complex</span>&#123;GVar&#123;<span class="built_in">Float64</span>, <span class="built_in">Float64</span>&#125;&#125;, <span class="built_in">Int64</span>&#125;</span><br><span class="line"></span><br><span class="line">typeof(GVar(adjoint(sp1)))</span><br><span class="line">SparseMatrixCSC&#123;<span class="built_in">Complex</span>&#123;GVar&#123;<span class="built_in">Float64</span>, <span class="built_in">Float64</span>&#125;&#125;, <span class="built_in">Int64</span>&#125;</span><br></pre></td></tr></table></figure>
+<p>发现GVar可能对adjoint(sp1)进行了求值，因此其种类为SparseMatrixCSC，而非Adjoint类，导致我实现的方法无法匹配；当然，我不清楚我的推断是否正确，又或者，可逆计算共轭转置的稀疏矩阵乘法的实现是不必要的？既然Gvar无法识别出Adjoint Transpose，那么只需要正向；该项目只需要对其他乘法算子进行实现，例如稀疏矩阵为右乘矩阵或kron积之类？</p>
+<h2 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><p>NiLang<a href="https://github.com/GiggleLiu/NiLang.jl">官方文档</a></p>
+<p>Nilang<a href="https://arxiv.org/abs/2003.04617">论文</a></p>
+<p>GiggleLiu的<a href="https://nextjournal.com/giggle/how-to-write-a-program-differentiably">blog</a></p>
+]]></content>
+      <categories>
+        <category>技术</category>
+      </categories>
+      <tags>
+        <tag>数值计算</tag>
+        <tag>Julia</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Git的ssh配置</title>
+    <url>/gitssh/</url>
+    <content><![CDATA[<p>近期配置新电脑时，按照惯常的ssh免密配置步骤对git进行免密配置，然而在git push origin main时一直出现如下报错</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">Permissiondenied (publickey).</span><br><span class="line">fatal:Could not read from remote repository.</span><br><span class="line">Pleasemake sure you have the correct access rights and the repository exists.</span><br></pre></td></tr></table></figure>
+<a id="more"></a>
+
+<p>因此在这篇文章中记录问题的解决过程（看官方文档…），并回顾下ssh免密的机制~</p>
+<h2 id="SSH概述"><a href="#SSH概述" class="headerlink" title="SSH概述"></a>SSH概述</h2><p>Secure Shell（安全外壳协议，简称SSH）是一种<strong>加密</strong>的网络传输协议，可在不安全的网络中为网络服务提供安全的传输环境，其最常见的用途是<strong>远程登录系统</strong>。本篇博客将对SSH连接过程与其在远程系统登录的应用进行介绍，重点说明<strong>非对称加密</strong>机制。</p>
+<h2 id="SSH连接过程"><a href="#SSH连接过程" class="headerlink" title="SSH连接过程"></a>SSH连接过程</h2><p>SSH既然是网络传输协议，因而其连接过程必然会涉及到客户端与服务端；我们通过介绍客户端向服务端发起连接请求，二者互相传输数据的过程，对SSH的<strong>非对称加密</strong>过程进行介绍。</p>
+<center><img src="https://onekb.oss-cn-zhangjiakou.aliyuncs.com/50453185/a014b9b6-0e5d-4b9b-bbfd-938efb3b8a22.png"></center>
+<center><font size=2><p>SSH连接过程 图源阿里云博客</p></font></center>
+
+<p>由上图分析可知，SSH连接分为三个阶段：</p>
+<ul>
+<li>1 服务器准备阶段<br>服务器生成密钥对（<em>公钥</em>和<em>私钥</em>）</li>
+<li>2 双方互发公钥<br>该阶段又被认为是非对称加密协商阶段：通过该阶段，客户端和服务端都有彼此的公钥，这为下一段传输信息的加密方法做了准备。</li>
+</ul>
+<p><strong>Note:使用对方的公钥对己方的的传输信息进行加密，这就是</strong>非对称加密<strong>；而</strong>对称加密**则是指用己方的密钥对己方的信息进行加密。</p>
+<ul>
+<li>3 双方数据传输<br>该阶段，又分为两步：<ul>
+<li> 1 服务端使用客户端的公钥对传输信息进行加密，客户端使用自己的私钥对传输信息进行解密；</li>
+<li> 2 客户端使用服务端对传输信息进行加密，服务端使用自己的私钥对传输信息进行解密。</li>
+</ul>
+</li>
+</ul>
+<p>显然，1和2过程为对偶过程，其共同点都是用对方的公钥对传输信息进行加密，使用自己的私钥对对传输信息进行解密，这是一个<strong>非对称加密</strong>过程。</p>
+<p><em>其实网络传输协议还有很多，比如TCP、UDP协议，以后有空了也会做一个比较的。</em></p>
+<h2 id="SSH的应用：免密登录"><a href="#SSH的应用：免密登录" class="headerlink" title="SSH的应用：免密登录"></a>SSH的应用：免密登录</h2><p>SSH加密传输具有安全性，因此其可以用于服务器的免密登录的身份校验过程。</p>
+<center><img src="https://onekb.oss-cn-zhangjiakou.aliyuncs.com/50453185/cc6d6bd0-b745-42e1-ba0a-c0d5dcc66564.png"></center>
+<center><font size=2><p>SSH免密登录过程 图源阿里云博客</p></font></center>
+
+<p>SSH免密登录相比于SSH连接过程要简单很多，因而二者的目的不同：SSH免密登录是指客户端A通过服务端B的身份校验进行登录；而SSH连接则需要保持整个会话双方信息传输的加密性。<br>因此，SSH免密登录主要有如下两阶段：</p>
+<ul>
+<li>1 客户端A将公钥信息提前写入服务端B(authorized keys)</li>
+<li>2 服务端B生成一串随机数（作为校验信息），使用客户端A的公钥对随机数进行加密传输给客户端A，A使用自己的私钥进行解密，将<em>解密后的信息发给服务端B</em>，服务端B进行校验通过后则发送允许登录凭证，A顺利登录；校验失败，则尝试其他方式进行登录。</li>
+</ul>
+<p>可以看到，这一过程中只有单向加密过程：服务端B向A发送加密信息，而A向B发送的<em>解密信息</em>则是以明文进行传输的（未加密）。</p>
+<h2 id="SSH配置git免密"><a href="#SSH配置git免密" class="headerlink" title="SSH配置git免密"></a>SSH配置git免密</h2><p>基于上述原理，我遵循传统的ssh免密登录方式，在本地生成一对密钥，并将该密钥添加到github上的SSH Keys(对应服务端的authorized keys文件夹)，然后在git push origin master时出现了如下权限错误</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">Permissiondenied (publickey).</span><br><span class="line">fatal:Could not read from remote repository.</span><br><span class="line">Pleasemake sure you have the correct access rights and the repository exists.</span><br></pre></td></tr></table></figure>
+<p>通过阅读<a href="https://docs.github.com/cn/github/authenticating-to-github/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent">GithubDocs</a>，发现需要在客户端A启动ssh-agent，并通过ssh-add将密钥注册到ssh-agent中，之后才能正常连接。</p>
+<p>这里自然是涉及到ssh-agent的作用：ssh-agent能够管理本机上的私钥文件，使用不同的密钥连接到不同的主机时，需要要手动指定对应的密钥，而ssh代理可以自动帮助我们选择对应的密钥进行认证。通过命令</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">ssh -v -T git@github.com</span><br></pre></td></tr></table></figure>
+<p>打印ssh连接信息，可以发现ssh-agent对当前所有私钥文件进行尝试，并成功选择相应的私钥文件进行客户端信息解密。</p>
+<p>当然这里我还有未解之谜：<br>我在~/.ssh/config文件中对登录信息进行了配置</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">Host yuran.github.com</span><br><span class="line">    HostName github.com</span><br><span class="line">    IdentityFile ~/.ssh/yuran_rsa</span><br><span class="line">    User yuran</span><br></pre></td></tr></table></figure>
+<p>理论上，这样的方式也同样指定了连接github时使用的私钥文件，为什么还会出现”Permission denied”的错误呢？同样的事，在我连接服务器不会出现。所以，如果我的配置没有出错的话，只能认为github是通过ssh-agent进行git用户身份认证的（因此要认真读官方文档！）</p>
+<p>以及config文件能够做更为强大的事，比如ssh端口转发等等~</p>
+<h2 id="参考博客"><a href="#参考博客" class="headerlink" title="参考博客"></a>参考博客</h2><p><a href="https://help.aliyun.com/document_detail/141305.html">SSH服务相关介绍</a><br><a href="https://blog.csdn.net/gediseer/article/details/54584329">SSH认证流程与规范</a>这篇文章也很棒，解答了我的未解之谜2：客户端发起登录请求是带着公钥的，服务器对该公钥在authorized_keys进行查询，如果查询失败则直接拒绝连接。</p>
+<p>无关紧要的感慨：第一次了解到SSH概念，是在大三下时参加ASC培训时的课后实验，我在自己的电脑上配置了两个linux虚拟机，对“服务端”和“客户端”一脸懵逼…非常感谢<a href="https://github.com/hopeful0">hopeful</a>对我的耐心，以及教我内网穿透以应用ssh端口转发。之后疫情在家，在lch的指导下用ssh端口转发把jupyter notebook开在学校服务器上，借用之前做的内网穿透转发到本地端口，才得以用上多卡gpu。本科毕业将近一年，班级同学大多断了联系，一路孤身、两点一线却又平凡的本科生活如一潭死水，但这些技术探索的往事，却时常在记忆中重现。非常感谢你们出现在我的生命中，在我真正自由而无用的青春时代。</p>
+]]></content>
+      <categories>
+        <category>技术</category>
+      </categories>
+      <tags>
+        <tag>Git</tag>
+        <tag>SSH</tag>
+      </tags>
+  </entry>
+</search>
