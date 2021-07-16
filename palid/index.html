@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+
+
+<html lang="en">
+
+
+<head>
+  <meta charset="utf-8" />
+    
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>
+    回文数乘法之数学技巧优化 |  Trace of Life
+  </title>
+  <meta name="generator" content="hexo-theme-ayer">
+  
+  <link rel="shortcut icon" href="/favicon.ico" />
+  
+  
+<link rel="stylesheet" href="/dist/main.css">
+
+  
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Shen-Yu/cdn/css/remixicon.min.css">
+
+  
+<link rel="stylesheet" href="/css/custom.css">
+
+  
+  
+<script src="https://cdn.jsdelivr.net/npm/pace-js@1.0.2/pace.min.js"></script>
+
+  
+  
+
+  
+
+</head>
+
+</html>
+
+<body>
+  <div id="app">
+    
+      
+    <main class="content on">
+      <section class="outer">
+  <article
+  id="post-palid"
+  class="article article-type-post"
+  itemscope
+  itemprop="blogPost"
+  data-scroll-reveal
+>
+  <div class="article-inner">
+    
+    <header class="article-header">
+       
+<h1 class="article-title sea-center" style="border-left:0" itemprop="name">
+  回文数乘法之数学技巧优化
+</h1>
+ 
+
+    </header>
+     
+    <div class="article-meta">
+      <a href="/palid/" class="article-date">
+  <time datetime="2021-03-26T08:35:25.000Z" itemprop="datePublished">2021-03-26</time>
+</a> 
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/%E6%8A%80%E6%9C%AF/">技术</a>
+  </div>
+  
+<div class="word_count">
+    <span class="post-time">
+        <span class="post-meta-item-icon">
+            <i class="ri-quill-pen-line"></i>
+            <span class="post-meta-item-text"> Word count:</span>
+            <span class="post-count">1.8k</span>
+        </span>
+    </span>
+
+    <span class="post-time">
+        &nbsp; | &nbsp;
+        <span class="post-meta-item-icon">
+            <i class="ri-book-open-line"></i>
+            <span class="post-meta-item-text"> Reading time≈</span>
+            <span class="post-count">7 min</span>
+        </span>
+    </span>
+</div>
+ 
+    </div>
+      
+
+
+
+  
+    <div class="article-entry" itemprop="articleBody">
+       
+  <p>  这周《数字孪生系统》课上有道题目很有意思，记录下自己的优化方案与遇到的坑。<br>  定义如下回文数乘法：<br>  ABCDEF * n = FEDCBA，试举出所有满足回文数乘法的六位数。<br>  例子：<br>  100001 * 1 = 100001<br>  219978 * 4 = 879912</p>
+<span id="more"></span>
+<p>  思路：最简单的思路，自然是对ABCDEF每一位进行暴力枚举，然后对n从1-9进行判断，是否满足回文乘法的要求。粗暴估算下，复杂度为O(N^7)，其中N=10。<br>  当然，即使是暴力，也需要注意细节：A位和F位需要从1枚举，以保证ABCDEF和FEDCBA<strong>首位不为0</strong>，为合法的六位数。</p>
+<p>  那么，这个问题有优化的空间吗？<br>  我决定从约束条件入手，对搜索空间进行剪枝，仔细观察这个等式<br>  ABCDEF * n = FEDCBA<br>  进行如下拆分<br>  (ABC* 10^3 + DEF) * n = (FED * 10^3 + CBA)<br>  等式两边同时对10^3取余，得<br>  DEF * n \text{mod}(10^3) = CBA<br>  通过取余变换，我们便可以对搜索空间进行剪枝，其伪代码如下：<br>  <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># i: def j: cba</span></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">100</span>, <span class="number">1000</span>):</span><br><span class="line">        <span class="keyword">for</span> n <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">1</span>,<span class="number">10</span>):</span><br><span class="line">            j = i * n % <span class="number">10</span>^<span class="number">3</span></span><br><span class="line">            store i,j,n</span><br></pre></td></tr></table></figure><br> 根据伪代码分析，改进后的复杂度为仅为O(N^4)，其中N=10，之后再对候选集里的元素进行回文乘法验证即可。这里我想强调的是，我从回文乘法的定义推导得到的取余式，是回文乘法数的<strong>必要条件</strong>，因此可以用于剪枝，如果是<strong>充分条件</strong>，过强的约束则可能错失部分可行解（运筹优化上头…）。<br>于是我开开心心的写好代码：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">cal_palid</span>(<span class="params">sep</span>):</span></span><br><span class="line">    <span class="comment"># 通过剪枝计算候选集</span></span><br><span class="line">    cand_list = []</span><br><span class="line">    sep = sep</span><br><span class="line">    lo = <span class="built_in">int</span>(sep / <span class="number">10</span>)</span><br><span class="line">    hi = sep </span><br><span class="line">    <span class="comment"># i: DEF j: CBA</span></span><br><span class="line">    <span class="comment"># ABCDEF * n = FEDCBA</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(lo, hi):</span><br><span class="line">        <span class="keyword">for</span> n <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">1</span>,<span class="number">10</span>):</span><br><span class="line">            j = i * n % hi </span><br><span class="line">            <span class="keyword">if</span> j &gt; lo:</span><br><span class="line">                cand_list.append((i, j, n))</span><br><span class="line">    <span class="keyword">return</span> cand_list </span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">check_ans</span>(<span class="params">i, j, k</span>):</span></span><br><span class="line">    <span class="comment"># 利用回文乘法定义验证</span></span><br><span class="line">    abc_str = <span class="string">&#x27;&#x27;</span>.join(<span class="built_in">reversed</span>(<span class="built_in">str</span>(j)))</span><br><span class="line">    def_str = <span class="built_in">str</span>(i)</span><br><span class="line">    abcdef_str = abc_str + def_str</span><br><span class="line">    rev_abcdef_str = <span class="string">&#x27;&#x27;</span>.join(<span class="built_in">reversed</span>(abcdef_str))</span><br><span class="line">    abcdef = <span class="built_in">int</span>(abcdef_str)</span><br><span class="line">    rev_abcdef = <span class="built_in">int</span>(rev_abcdef_str)</span><br><span class="line">    <span class="keyword">if</span> abcdef * k == rev_abcdef:</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">True</span></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">False</span></span><br></pre></td></tr></table></figure>
+<p>输出了下合法回文数的个数，902，和旁边同学用暴力枚举的结果一样，看来是对的！<br>不过，且慢，真的对吗？</p>
+<ul>
+<li>1 i的枚举范围是100-999吗？</li>
+<li>2 j需要大于100吗？<br>仔细思考，取余变换后，合法六位数的约束条件是：</li>
+<li>1 ABC &gt; 100</li>
+<li>2 FED &gt; 100<br>然而，枚举的i代表DEF，从100开始枚举，则忽略了部分可行解，以100001为例，ABC=100，DEF=001，显然，1不在i枚举的范围内。<br>聪明的做法自然是，对FED从100-999进行枚举，然后转换成DEF，然后算出CBA的值，根据CBA求出ABC，判断ABC是否大于100，如果大于，则添加到候选集中。因此正确的剪枝函数如下：<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">cal_palid</span>(<span class="params">sep</span>):</span></span><br><span class="line">    cand_list = []</span><br><span class="line">    sep = sep</span><br><span class="line">    lo = <span class="built_in">int</span>(sep / <span class="number">10</span>)</span><br><span class="line">    hi = sep </span><br><span class="line">    <span class="comment"># i: FED j: CBA</span></span><br><span class="line">    <span class="comment"># rev_i: DEF rev_j: ABC</span></span><br><span class="line">    <span class="comment"># ABCDEF * n = FEDCBA</span></span><br><span class="line">    int_wd = <span class="built_in">len</span>(<span class="built_in">str</span>(sep)) - <span class="number">1</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(lo, hi):</span><br><span class="line">        <span class="keyword">for</span> n <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">1</span>,<span class="number">10</span>):</span><br><span class="line">            rev_i = int_reverse(i, int_wd)</span><br><span class="line">            j = rev_i * n % hi</span><br><span class="line">            rev_j = int_reverse(j, int_wd) </span><br><span class="line">            <span class="keyword">if</span> rev_j &gt;= lo:</span><br><span class="line">                cand_list.append((rev_j, rev_i, n))</span><br><span class="line">    <span class="keyword">return</span> cand_list</span><br></pre></td></tr></table></figure>
+这里又涉及到一个常见的代码基本功：如何实现数字反转？<br>最直观的想法，当然是先把数字变成字符串，然后对字符串进行反转。也有数学点的方法，模10取余法。复杂度差距不大，于是我改完了bug，开心地实现了int_reverse函数：<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">int_reverse</span>(<span class="params">num</span>):</span></span><br><span class="line">    num_str = <span class="built_in">str</span>(num)</span><br><span class="line">    revnum_str = <span class="string">&#x27;&#x27;</span>.join(<span class="built_in">reversed</span>(num_str))</span><br><span class="line">    revnum = <span class="built_in">int</span>(revnum_str) </span><br><span class="line">    <span class="keyword">return</span> revnum</span><br></pre></td></tr></table></figure>
+然后重新跑了一遍结果，发现变成了812。欸，为什么漏了可行解呢？<br>继续考虑100001这个例子，当算出j=1时，我们对CBA进行reverse，得到的结果是100吗？根据我实现的int_reverse来看，结果还是1！因为没有对0进行补齐！对于所有小于100的j，int_reverse的翻转结果ABC都是小于100的数，漏了可行解！<br>因此，需要对int_reverse进行修正，使用格式化字符串的思想：</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">int_reverse</span>(<span class="params">num, width</span>):</span></span><br><span class="line">    num_str = <span class="built_in">str</span>(num).zfill(width)</span><br><span class="line">    revnum_str = <span class="string">&#x27;&#x27;</span>.join(<span class="built_in">reversed</span>(num_str))</span><br><span class="line">    revnum = <span class="built_in">int</span>(revnum_str) </span><br><span class="line">    <span class="keyword">return</span> revnum</span><br></pre></td></tr></table></figure>
+
+<p>这样，int_reverse就能返回正确的结果，我又跑了一遍代码，还是902。（所以改了两遍bug等于没改bug？？？）</p>
+<p>当然，这道题目还提到八位数，应该如何考虑？其实很简单，还是对半分，而且我也不需要重新写个八位数回文数乘法，只需要传入sep=10^4即可。<br>如果是奇数位的回文数乘法呢？这时候中心位的处理就较为麻烦，我的想法是在剪枝过程中对中心位不做限制，仅约束前后(n-1)/2位，最后在验证回文乘的时候对中心位进行枚举。<br>以下是该问题的全部代码，通过修改sep的值，即可实现偶位数的回文乘法。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">int_reverse</span>(<span class="params">num, width</span>):</span></span><br><span class="line">    num_str = <span class="built_in">str</span>(num).zfill(width)</span><br><span class="line">    revnum_str = <span class="string">&#x27;&#x27;</span>.join(<span class="built_in">reversed</span>(num_str))</span><br><span class="line">    revnum = <span class="built_in">int</span>(revnum_str) </span><br><span class="line">    <span class="keyword">return</span> revnum</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">cal_palid</span>(<span class="params">sep</span>):</span></span><br><span class="line">    cand_list = []</span><br><span class="line">    sep = sep</span><br><span class="line">    lo = <span class="built_in">int</span>(sep / <span class="number">10</span>)</span><br><span class="line">    hi = sep </span><br><span class="line">    <span class="comment"># i: FED j: CBA</span></span><br><span class="line">    <span class="comment"># rev_i: DEF rev_j: ABC</span></span><br><span class="line">    <span class="comment"># ABCDEF * n = FEDCBA</span></span><br><span class="line">    int_wd = <span class="built_in">len</span>(<span class="built_in">str</span>(sep)) - <span class="number">1</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(lo, hi):</span><br><span class="line">        <span class="keyword">for</span> n <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">1</span>,<span class="number">10</span>):</span><br><span class="line">            rev_i = int_reverse(i, int_wd)</span><br><span class="line">            j = rev_i * n % hi</span><br><span class="line">            rev_j = int_reverse(j, int_wd) </span><br><span class="line">            <span class="keyword">if</span> rev_j &gt;= lo:</span><br><span class="line">                cand_list.append((rev_j, rev_i, n))</span><br><span class="line">    <span class="keyword">return</span> cand_list</span><br><span class="line">    </span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">check_ans</span>(<span class="params">rev_j, rev_i, k</span>):</span></span><br><span class="line">    <span class="comment"># calculate reverse str</span></span><br><span class="line">    abc_str = <span class="built_in">str</span>(rev_j)</span><br><span class="line">    def_str = <span class="built_in">str</span>(rev_i)</span><br><span class="line">    abcdef_str = abc_str + def_str</span><br><span class="line">    rev_abcdef_str = <span class="string">&#x27;&#x27;</span>.join(<span class="built_in">reversed</span>(abcdef_str))</span><br><span class="line">    </span><br><span class="line">    abcdef = <span class="built_in">int</span>(abcdef_str)</span><br><span class="line">    rev_abcdef = <span class="built_in">int</span>(rev_abcdef_str)</span><br><span class="line">    <span class="keyword">if</span> abcdef * k == rev_abcdef:</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">True</span></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">False</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">recon_palid</span>(<span class="params">cand_list</span>):</span></span><br><span class="line">    ans_list = []</span><br><span class="line">    <span class="keyword">for</span> item <span class="keyword">in</span> cand_list:</span><br><span class="line">        rev_j, i, k = item </span><br><span class="line">        <span class="keyword">if</span> check_ans(*item):</span><br><span class="line">            ans_list.append(item)</span><br><span class="line">    <span class="keyword">return</span> ans_list</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&#x27;__main__&#x27;</span>:</span><br><span class="line">    sep = <span class="number">10000</span></span><br><span class="line">    cand_list = cal_palid(sep)</span><br><span class="line">    ans_list = recon_palid(cand_list)</span><br><span class="line">    int_wd = <span class="built_in">len</span>(<span class="built_in">str</span>(sep)) - <span class="number">1</span></span><br><span class="line">    <span class="keyword">for</span> item <span class="keyword">in</span> ans_list:</span><br><span class="line">        rev_j, rev_i, k = item</span><br><span class="line">        item = (<span class="built_in">str</span>(rev_j), <span class="built_in">str</span>(rev_i).zfill(int_wd), k)</span><br><span class="line">        <span class="built_in">print</span>(item)</span><br></pre></td></tr></table></figure>
+<p>当然，如果是短时间内骗分的话，最快的思路当然是把这道题退化成求回文数…回文数就是回文数乘法的充分条件…因为回文数乘1还是它本身…</p>
+<p>最后，是一些题外话。其实我之前是很烦看OJ题的，因为我一直觉得除了为了应付找工作面视，没什么意义。我其实也不太擅长数据结构与算法，因为我也不知道这能用在哪。但最近看了<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/356155386">华为21软挑赛题</a>（我当然是没空参加…），尽管购买服务器与虚拟机分配都可以用线性规划去解（实现迁移），从数学建模角度来说，非常容易；但真正去实现这个系统的调度，涉及到虚拟机类、服务器类、调度类的交互，以及如果线性规划问题没有解，还需要实现一套贪心算法，通过对资源容量排序返回最富余的机器，这个过程中涉及增删改查，高效的操作离不开底层的数据结构。不过有人可能会说，这个交给工程师去做就好了，数学系的操心算法就好…然而我的过往经验是，与其让别人实现还不如自己实现，因为工程师可能觉得你就在纸上谈兵…</p>
+ 
+      <!-- reward -->
+      
+    </div>
+    
+
+    <!-- copyright -->
+    
+    <div class="declare">
+      <ul class="post-copyright">
+        <li>
+          <i class="ri-copyright-line"></i>
+          <strong>Copyright： </strong>
+          
+          Copyright is owned by the author. For commercial reprints, please contact the author for authorization. For non-commercial reprints, please indicate the source.
+          
+        </li>
+      </ul>
+    </div>
+    
+    <footer class="article-footer">
+       
+<div class="share-btn">
+      <span class="share-sns share-outer">
+        <i class="ri-share-forward-line"></i>
+        分享
+      </span>
+      <div class="share-wrap">
+        <i class="arrow"></i>
+        <div class="share-icons">
+          
+          <a class="weibo share-sns" href="javascript:;" data-type="weibo">
+            <i class="ri-weibo-fill"></i>
+          </a>
+          <a class="weixin share-sns wxFab" href="javascript:;" data-type="weixin">
+            <i class="ri-wechat-fill"></i>
+          </a>
+          <a class="qq share-sns" href="javascript:;" data-type="qq">
+            <i class="ri-qq-fill"></i>
+          </a>
+          <a class="douban share-sns" href="javascript:;" data-type="douban">
+            <i class="ri-douban-line"></i>
+          </a>
+          <!-- <a class="qzone share-sns" href="javascript:;" data-type="qzone">
+            <i class="icon icon-qzone"></i>
+          </a> -->
+          
+          <a class="facebook share-sns" href="javascript:;" data-type="facebook">
+            <i class="ri-facebook-circle-fill"></i>
+          </a>
+          <a class="twitter share-sns" href="javascript:;" data-type="twitter">
+            <i class="ri-twitter-fill"></i>
+          </a>
+          <a class="google share-sns" href="javascript:;" data-type="google">
+            <i class="ri-google-fill"></i>
+          </a>
+        </div>
+      </div>
+</div>
+
+<div class="wx-share-modal">
+    <a class="modal-close" href="javascript:;"><i class="ri-close-circle-line"></i></a>
+    <p>扫一扫，分享到微信</p>
+    <div class="wx-qrcode">
+      <img src="//api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://jieli-matrix.github.io/palid/" alt="微信分享二维码">
+    </div>
+</div>
+
+<div id="share-mask"></div>  
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E4%BC%98%E5%8C%96/" rel="tag">优化</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E7%AE%97%E6%B3%95/" rel="tag">算法</a></li></ul>
+
+    </footer>
+  </div>
+
+   
+  <nav class="article-nav">
+    
+      <a href="/task/" class="article-nav-link">
+        <strong class="article-nav-caption">上一篇</strong>
+        <div class="article-nav-title">
+          
+            任务调度器
+          
+        </div>
+      </a>
+    
+    
+      <a href="/OCR/" class="article-nav-link">
+        <strong class="article-nav-caption">下一篇</strong>
+        <div class="article-nav-title">paddleocr多平台使用</div>
+      </a>
+    
+  </nav>
+
+   
+<!-- valine评论 -->
+<div id="vcomments-box">
+  <div id="vcomments"></div>
+</div>
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/valine@1.4.14/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+    el: "#vcomments",
+    app_id: "c5xH31KSltW5u7gCuwHpk4N7-gzGzoHsz",
+    app_key: "j4stowtqUSucOaK8usdRWJCx",
+    path: window.location.pathname,
+    avatar: "monsterid",
+    placeholder: "给我的文章加点评论吧~",
+    recordIP: true,
+  });
+  const infoEle = document.querySelector("#vcomments .info");
+  if (infoEle && infoEle.childNodes && infoEle.childNodes.length > 0) {
+    infoEle.childNodes.forEach(function (item) {
+      item.parentNode.removeChild(item);
+    });
+  }
+</script>
+<style>
+  #vcomments-box {
+    padding: 5px 30px;
+  }
+
+  @media screen and (max-width: 800px) {
+    #vcomments-box {
+      padding: 5px 0px;
+    }
+  }
+
+  #vcomments-box #vcomments {
+    background-color: #fff;
+  }
+
+  .v .vlist .vcard .vh {
+    padding-right: 20px;
+  }
+
+  .v .vlist .vcard {
+    padding-left: 10px;
+  }
+</style>
+
+ 
+   
+     
+</article>
+
+</section>
+      <footer class="footer">
+  <div class="outer">
+    <ul>
+      <li>
+        Copyrights &copy;
+        2021
+        <i class="ri-heart-fill heart_icon"></i> Jie Li
+      </li>
+    </ul>
+    <ul>
+      <li>
+        
+        
+        
+        Powered by <a href="https://hexo.io" target="_blank">Hexo</a>
+        <span class="division">|</span>
+        Theme - <a href="https://github.com/Shen-Yu/hexo-theme-ayer" target="_blank">Ayer</a>
+        
+      </li>
+    </ul>
+    <ul>
+      <li>
+        
+        
+        <span>
+  <span><i class="ri-user-3-fill"></i>Visitors:<span id="busuanzi_value_site_uv"></span></s>
+  <span class="division">|</span>
+  <span><i class="ri-eye-fill"></i>Views:<span id="busuanzi_value_page_pv"></span></span>
+</span>
+        
+      </li>
+    </ul>
+    <ul>
+      
+    </ul>
+    <ul>
+      
+    </ul>
+    <ul>
+      <li>
+        <!-- cnzz统计 -->
+        
+        <script type="text/javascript" src='https://s9.cnzz.com/z_stat.php?id=1279624872&amp;web_id=1279624872'></script>
+        
+      </li>
+    </ul>
+  </div>
+</footer>
+      <div class="float_btns">
+        <div class="totop" id="totop">
+  <i class="ri-arrow-up-line"></i>
+</div>
+
+<div class="todark" id="todark">
+  <i class="ri-moon-line"></i>
+</div>
+
+      </div>
+    </main>
+    <aside class="sidebar on">
+      <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/ayer-side.svg" alt="Trace of Life"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">主页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/tags">标签</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/friends">友链</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/aboutme">关于我</a>
+    </li>
+    
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      
+      <a class="nav-item-link nav-item-search"  title="Search">
+        <i class="ri-search-line"></i>
+      </a>
+      
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="ri-rss-line"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+    </aside>
+    <script>
+      if (window.matchMedia("(max-width: 768px)").matches) {
+        document.querySelector('.content').classList.remove('on');
+        document.querySelector('.sidebar').classList.remove('on');
+      }
+    </script>
+    <div id="mask"></div>
+
+<!-- #reward -->
+<div id="reward">
+  <span class="close"><i class="ri-close-line"></i></span>
+  <p class="reward-p"><i class="ri-cup-line"></i>请我喝杯咖啡吧~</p>
+  <div class="reward-box">
+    
+    <div class="reward-item">
+      <img class="reward-img" src="https://cdn.jsdelivr.net/gh/Shen-Yu/cdn/img/alipay.jpg">
+      <span class="reward-type">支付宝</span>
+    </div>
+    
+    
+    <div class="reward-item">
+      <img class="reward-img" src="https://cdn.jsdelivr.net/gh/Shen-Yu/cdn/img/wechat.jpg">
+      <span class="reward-type">微信</span>
+    </div>
+    
+  </div>
+</div>
+    
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+<!-- Tocbot -->
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    scrollContainer: 'main',
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto'
+  });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/jquery-modal@0.9.2/jquery.modal.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jquery-modal@0.9.2/jquery.modal.min.css">
+<script src="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/js/jquery.justifiedGallery.min.js"></script>
+
+<script src="/dist/main.js"></script>
+
+<!-- ImageViewer -->
+
+<!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                <!--  Controls are self-explanatory. Order can be changed. -->
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" style="display:none" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css">
+<script src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"></script>
+
+<script>
+    function viewer_init() {
+        let pswpElement = document.querySelectorAll('.pswp')[0];
+        let $imgArr = document.querySelectorAll(('.article-entry img:not(.reward-img)'))
+
+        $imgArr.forEach(($em, i) => {
+            $em.onclick = () => {
+                // slider展开状态
+                // todo: 这样不好，后面改成状态
+                if (document.querySelector('.left-col.show')) return
+                let items = []
+                $imgArr.forEach(($em2, i2) => {
+                    let img = $em2.getAttribute('data-idx', i2)
+                    let src = $em2.getAttribute('data-target') || $em2.getAttribute('src')
+                    let title = $em2.getAttribute('alt')
+                    // 获得原图尺寸
+                    const image = new Image()
+                    image.src = src
+                    items.push({
+                        src: src,
+                        w: image.width || $em2.width,
+                        h: image.height || $em2.height,
+                        title: title
+                    })
+                })
+                var gallery = new PhotoSwipe(pswpElement, PhotoSwipeUI_Default, items, {
+                    index: parseInt(i)
+                });
+                gallery.init()
+            }
+        })
+    }
+    viewer_init()
+</script>
+
+<!-- MathJax -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+      tex2jax: {
+          inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+          processEscapes: true,
+          skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+  });
+
+  MathJax.Hub.Queue(function() {
+      var all = MathJax.Hub.getAllJax(), i;
+      for(i=0; i < all.length; i += 1) {
+          all[i].SourceElement().parentNode.className += ' has-jax';
+      }
+  });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/mathjax@2.7.6/unpacked/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script>
+  var ayerConfig = {
+    mathjax: true
+  }
+</script>
+
+<!-- Katex -->
+
+<!-- busuanzi  -->
+
+
+<script src="/js/busuanzi-2.3.pure.min.js"></script>
+
+
+<!-- ClickLove -->
+
+<!-- ClickBoom1 -->
+
+<!-- ClickBoom2 -->
+
+<!-- CodeCopy -->
+
+
+<link rel="stylesheet" href="/css/clipboard.css">
+
+<script src="https://cdn.jsdelivr.net/npm/clipboard@2/dist/clipboard.min.js"></script>
+<script>
+  function wait(callback, seconds) {
+    var timelag = null;
+    timelag = window.setTimeout(callback, seconds);
+  }
+  !function (e, t, a) {
+    var initCopyCode = function(){
+      var copyHtml = '';
+      copyHtml += '<button class="btn-copy" data-clipboard-snippet="">';
+      copyHtml += '<i class="ri-file-copy-2-line"></i><span>COPY</span>';
+      copyHtml += '</button>';
+      $(".highlight .code pre").before(copyHtml);
+      $(".article pre code").before(copyHtml);
+      var clipboard = new ClipboardJS('.btn-copy', {
+        target: function(trigger) {
+          return trigger.nextElementSibling;
+        }
+      });
+      clipboard.on('success', function(e) {
+        let $btn = $(e.trigger);
+        $btn.addClass('copied');
+        let $icon = $($btn.find('i'));
+        $icon.removeClass('ri-file-copy-2-line');
+        $icon.addClass('ri-checkbox-circle-line');
+        let $span = $($btn.find('span'));
+        $span[0].innerText = 'COPIED';
+        
+        wait(function () { // 等待两秒钟后恢复
+          $icon.removeClass('ri-checkbox-circle-line');
+          $icon.addClass('ri-file-copy-2-line');
+          $span[0].innerText = 'COPY';
+        }, 2000);
+      });
+      clipboard.on('error', function(e) {
+        e.clearSelection();
+        let $btn = $(e.trigger);
+        $btn.addClass('copy-failed');
+        let $icon = $($btn.find('i'));
+        $icon.removeClass('ri-file-copy-2-line');
+        $icon.addClass('ri-time-line');
+        let $span = $($btn.find('span'));
+        $span[0].innerText = 'COPY FAILED';
+        
+        wait(function () { // 等待两秒钟后恢复
+          $icon.removeClass('ri-time-line');
+          $icon.addClass('ri-file-copy-2-line');
+          $span[0].innerText = 'COPY';
+        }, 2000);
+      });
+    }
+    initCopyCode();
+  }(window, document);
+</script>
+
+
+<!-- CanvasBackground -->
+
+
+    
+  </div>
+</body>
+
+</html>

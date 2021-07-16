@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+
+
+<html lang="en">
+
+
+<head>
+  <meta charset="utf-8" />
+    
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>
+    任务调度器 |  Trace of Life
+  </title>
+  <meta name="generator" content="hexo-theme-ayer">
+  
+  <link rel="shortcut icon" href="/favicon.ico" />
+  
+  
+<link rel="stylesheet" href="/dist/main.css">
+
+  
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Shen-Yu/cdn/css/remixicon.min.css">
+
+  
+<link rel="stylesheet" href="/css/custom.css">
+
+  
+  
+<script src="https://cdn.jsdelivr.net/npm/pace-js@1.0.2/pace.min.js"></script>
+
+  
+  
+
+  
+
+</head>
+
+</html>
+
+<body>
+  <div id="app">
+    
+      
+    <main class="content on">
+      <section class="outer">
+  <article
+  id="post-task"
+  class="article article-type-post"
+  itemscope
+  itemprop="blogPost"
+  data-scroll-reveal
+>
+  <div class="article-inner">
+    
+    <header class="article-header">
+       
+<h1 class="article-title sea-center" style="border-left:0" itemprop="name">
+  任务调度器
+</h1>
+ 
+
+    </header>
+     
+    <div class="article-meta">
+      <a href="/task/" class="article-date">
+  <time datetime="2021-03-30T10:38:26.000Z" itemprop="datePublished">2021-03-30</time>
+</a> 
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/%E6%8A%80%E6%9C%AF/">技术</a>
+  </div>
+  
+<div class="word_count">
+    <span class="post-time">
+        <span class="post-meta-item-icon">
+            <i class="ri-quill-pen-line"></i>
+            <span class="post-meta-item-text"> Word count:</span>
+            <span class="post-count">2k</span>
+        </span>
+    </span>
+
+    <span class="post-time">
+        &nbsp; | &nbsp;
+        <span class="post-meta-item-icon">
+            <i class="ri-book-open-line"></i>
+            <span class="post-meta-item-text"> Reading time≈</span>
+            <span class="post-count">8 min</span>
+        </span>
+    </span>
+</div>
+ 
+    </div>
+      
+
+
+
+  
+    <div class="article-entry" itemprop="articleBody">
+       
+  <p>又是新一周的《数字孪生系统》课堂，当我正昏昏欲睡时，前排的朋友回头戳我<br>“来，做道题清醒一下”<br>题面如下：</p>
+<span id="more"></span>
+<blockquote>
+<p>给你一个用字符数组 tasks 表示的 CPU 需要执行的任务列表。其中每个字母表示一种不同种类的任务。任务可以以任意顺序执行，并且每个任务都可以在 1 个单位时间内执行完。在任何一个单位时间，CPU 可以完成一个任务，或者处于待命状态。<br>然而，两个 相同种类 的任务之间必须有长度为整数 n 的冷却时间，因此至少有连续 n 个单位时间内 CPU 在执行不同的任务，或者在待命状态。</p>
+</blockquote>
+<blockquote>
+<p>你需要计算完成所有任务所需要的 最短时间 。<br>示例 1：<br>输入：tasks = [“A”,”A”,”A”,”B”,”B”,”B”], n = 2<br>输出：8<br>解释：A -&gt; B -&gt; (待命) -&gt; A -&gt; B -&gt; (待命) -&gt; A -&gt; B<br>     在本示例中，两个相同类型任务之间必须间隔长度为 n = 2 的冷却时间，而执行一个任务只需要一个单位时间，所以中间出现了（待命）状态。<br>示例 3：<br>输入：tasks = [“A”,”A”,”A”,”A”,”A”,”A”,”B”,”C”,”D”,”E”,”F”,”G”], n = 2<br>输出：16<br>解释：一种可能的解决方案是：<br>     A -&gt; B -&gt; C -&gt; A -&gt; D -&gt; E -&gt; A -&gt; F -&gt; G -&gt; A -&gt; (待命) -&gt; (待命) -&gt; A -&gt; (待命) -&gt; (待命) -&gt; A<br>来源：力扣（LeetCode）<br>链接：<a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/task-scheduler">https://leetcode-cn.com/problems/task-scheduler</a></p>
+</blockquote>
+<p>我带着困惑读完题后，戳他“这题能做，但不敢保证是最短时间”<br>他说“你不觉得这个题目是个数学优化问题吗？”<br>我无奈“这能算数学优化么…再说这优化题我哪会解啊，满足约束后就贪心”<br>作为数学优化方向的研究生，那我们就从优化的角度来分析下这道题吧~<br>第一步，分析题意。问题的<strong>输入</strong>是task_list，其元素为若干可重复的大写英文字母；问题需要根据task_list求解action_list，action_list为CPU状态序列，其包含task_list所有元素与”sleep”，<strong>约束条件</strong>是action_list相同元素间的间隔必须大于n；问题<strong>目标</strong>为满足该约束的action_list的长度最小值。<br>显然这道题与连续优化无关…但我还是要把它放到运筹的框架下去分析…从理论上分析，我们可以根据task_list生成满足约束条件的所有可行解，然后从可行解中选取最优解。然而这实在不是一个好主意，因为可行解理论上来说是无穷的，比如让CPU长时间处于sleep状态，因此我们的目标转化为<strong>最小化CPU的sleep次数</strong>。<br>让我们换个视角来看CPU的action_list，把它视为一个动力系统，对于每一个CPU时刻，我们需要根据一个policy去决策CPU的状态M(sleep或任务态)。那么，这个policy应该如何制定呢？<br>我认为，policy分为两步：</p>
+<ul>
+<li>根据当前时刻的action_list和间隔范围n，对照task_list确定满足间隔约束的候选集</li>
+<li>查找候选集中，选择当前<strong>剩余任务数最大</strong>的任务作为CPU当前状态M；从直觉上来说，我们要尽可能使得剩余种类的任务数均匀，这样才能减少间隔约束出现的可能。<br>接下来，我们需要考虑边界条件。如果当前候选集为空，CPU状态则为”sleep”。需要考虑到的是，这里满足间隔约束的候选集，并不是当前状态真正的候选集，其必须满足<strong>该任务的余量大于0</strong>，如果该任务的余量小于0，那么CPU仍进入sleep</li>
+</ul>
+<p>数学的部分就到此结束啦（虽然我还不知道这求出来的是不是最小值…但我确定一定能给出满足约束的可行解…），接下来我们考虑问题的代码实现。<br>首先，我们需要知道，这个系统的终止时刻是什么？是task_list长度吗？显然不是，应该是action_list长度。action_list是动态增大的过程，那么action_list合适停止生长呢？应该是task_list剩余任务数为0时（你品，你细品，绝对不是task_list的长度）。<br>所以我们需要有个while循环，这个while循环的次数，是action_list的长度，也是最短的任务执行时间。<br>okay，这个问题的大框架我们就这样确定了：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">action_list = []</span><br><span class="line"><span class="keyword">while</span> remain_tasks &gt; <span class="number">0</span>:</span><br><span class="line">    action = take_policy(action_list, n, task_list)</span><br><span class="line">    action_list.append(action)</span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">len</span>(action_list))</span><br></pre></td></tr></table></figure>
+<p>那么接下来，就涉及到如何维护remain_tasks和实施policy。我们分析一下需要的接口</p>
+<blockquote>
+<p>initial TaskManager from task_list<br>pop task from TaskManager into action_list<br>maintain remain_tasks from TaskManager<br>decide current state for action_list based on policy</p>
+</blockquote>
+<p>okay，那么看起来我们需要组织下TaskManager，这里我选择用python的dict作为其核心数据结构，前三点全部实现为TaskManager的类属性/方法，最后的决策过程我选择用函数来实现。</p>
+<p>TaskManager实现如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">TaskManager</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self, task_lists</span>):</span></span><br><span class="line">        self.remain_tasks = <span class="built_in">len</span>(task_lists)</span><br><span class="line">        self.task_dict = <span class="built_in">dict</span>.fromkeys(task_lists, <span class="number">0</span>)</span><br><span class="line">        <span class="keyword">for</span> item <span class="keyword">in</span> task_lists:</span><br><span class="line">            self.task_dict[item] = self.task_dict[item] + <span class="number">1</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">pop_task</span>(<span class="params">self, task</span>):</span></span><br><span class="line">        <span class="keyword">if</span> self.task_dict[task] &gt; <span class="number">0</span>:</span><br><span class="line">            self.task_dict[task] = self.task_dict[task] - <span class="number">1</span></span><br><span class="line">            self.remain_tasks = self.remain_tasks - <span class="number">1</span></span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            <span class="keyword">raise</span> ValueError(<span class="string">&quot;Couldn&#x27;t pop from empty item!&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>decision_process过程实现如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> operator</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">decision_process</span>(<span class="params">action_list, n, cpu_timer, TM</span>):</span></span><br><span class="line">    schedule_lo = <span class="built_in">max</span>(<span class="number">0</span>, cpu_timer - n)</span><br><span class="line">    schedule_hi = <span class="built_in">max</span>(<span class="number">0</span>, cpu_timer - <span class="number">1</span>) + <span class="number">1</span></span><br><span class="line">    block_set = <span class="built_in">set</span>(action_list[schedule_lo:schedule_hi])</span><br><span class="line">    <span class="comment"># generate cand_dict</span></span><br><span class="line">    cand_dict = &#123;&#125;</span><br><span class="line">    <span class="keyword">for</span> key,val <span class="keyword">in</span> TM.task_dict.items():</span><br><span class="line">        <span class="keyword">if</span> key <span class="keyword">in</span> block_set:</span><br><span class="line">            <span class="keyword">continue</span></span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            cand_dict[key] = val</span><br><span class="line">    <span class="comment"># decide action</span></span><br><span class="line">    action = <span class="string">&quot;sleep&quot;</span></span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">len</span>(cand_dict) == <span class="number">0</span>:</span><br><span class="line">        <span class="keyword">return</span> action</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        best_cand, best_val = <span class="built_in">max</span>(cand_dict.items(), key=operator.itemgetter(<span class="number">1</span>))</span><br><span class="line">        <span class="keyword">if</span> best_val == <span class="number">0</span>:</span><br><span class="line">            <span class="keyword">return</span> action</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            action = best_cand</span><br><span class="line">            TM.pop_task(action)</span><br><span class="line">            <span class="keyword">return</span> action</span><br></pre></td></tr></table></figure>
+<p>这里用了operator的itemgetter函数，用于获取对象对应维度的数据，以</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">best_cand, best_val = <span class="built_in">max</span>(cand_dict.items(), key=operator.itemgetter(<span class="number">1</span>))</span><br></pre></td></tr></table></figure>
+<p>为例，cand_dict.items()为(key,val)数据类型，operator.itemgetter(1)获取val作为函数变量，传递给max（大概这里可以理解成泛型）。<br>总调度过程如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">schedule_process</span>(<span class="params">task_list, n</span>):</span></span><br><span class="line">    TM = TaskManager(task_list)</span><br><span class="line">    action_list = []</span><br><span class="line">    cpu_timer = <span class="number">0</span></span><br><span class="line">    <span class="keyword">while</span> TM.remain_tasks &gt; <span class="number">0</span>:</span><br><span class="line">        action = decision_process(action_list, n, cpu_timer, TM)</span><br><span class="line">        action_list.append(action)</span><br><span class="line">        cpu_timer = cpu_timer + <span class="number">1</span></span><br><span class="line">    <span class="keyword">return</span> action_list, cpu_timer</span><br></pre></td></tr></table></figure>
+
+<p>写个用例测试下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&#x27;__main__&#x27;</span>:</span><br><span class="line">    task_list = [<span class="string">&quot;A&quot;</span>,<span class="string">&quot;A&quot;</span>,<span class="string">&quot;A&quot;</span>,<span class="string">&quot;A&quot;</span>,<span class="string">&quot;A&quot;</span>,<span class="string">&quot;A&quot;</span>,<span class="string">&quot;B&quot;</span>,<span class="string">&quot;C&quot;</span>,<span class="string">&quot;D&quot;</span>,<span class="string">&quot;E&quot;</span>,<span class="string">&quot;F&quot;</span>,<span class="string">&quot;G&quot;</span>]</span><br><span class="line">    n = <span class="number">2</span></span><br><span class="line">    action_list, cpu_timer = schedule_process(task_list, n)</span><br><span class="line">    <span class="built_in">print</span>(action_list)</span><br><span class="line">    <span class="built_in">print</span>(cpu_timer)</span><br></pre></td></tr></table></figure>
+
+<p>输出为：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[<span class="string">&#x27;A&#x27;</span>, <span class="string">&#x27;B&#x27;</span>, <span class="string">&#x27;C&#x27;</span>, <span class="string">&#x27;A&#x27;</span>, <span class="string">&#x27;D&#x27;</span>, <span class="string">&#x27;E&#x27;</span>, <span class="string">&#x27;A&#x27;</span>, <span class="string">&#x27;F&#x27;</span>, <span class="string">&#x27;G&#x27;</span>, <span class="string">&#x27;A&#x27;</span>, <span class="string">&#x27;sleep&#x27;</span>, <span class="string">&#x27;sleep&#x27;</span>, <span class="string">&#x27;A&#x27;</span>, <span class="string">&#x27;sleep&#x27;</span>, <span class="string">&#x27;sleep&#x27;</span>, <span class="string">&#x27;A&#x27;</span>]</span><br><span class="line"><span class="number">16</span></span><br></pre></td></tr></table></figure>
+<p>关于这道题，我能想到的其他优化点，应该是确定候选集：这一步是可以充分利用上一步信息，在n很大的情形下，候选集每次最多更新两位（unique的删除最远位，增加最新位），这里可以维护个数据结构，记录的是当前cand_set里的元素及其距离当前cpu_timer最近的id，然后再根据两步移动来更新。不过题面写n&lt;100，我觉得就不用那么极致地追求优化了…</p>
+<p>虽然这只是一道普通算法题，但对我而言，这道题能否做出来并不重要，我在意的是用自己的思维体系与知识结构去解读、分析。这道题让我联想到这学期《强化学习》和旁听的《最优化理论》中的DP Process，每一步的state, action和policy是如何影响动力系统变化的。其实数学理论的动规很有意思（可惜我错过郦老师的第一节动规课了…），虽然我本人并没刷过计算机动态规划的题（手动笑哭），所以我也不保证这题贪心就对~<br>最后想吐槽下自己的python代码风格…我觉得写得很有c++的感觉…<br>附上完整代码：<br><a target="_blank" rel="noopener" href="https://pastebin.ubuntu.com/p/M7sTDbNMMQ/">上课原始版代码</a>这是我在上课时云里雾里写的，当时设计的还要排序…后来跟前排的朋友讨论意识到应该重新设计下数据结构，max就够了。<br><a target="_blank" rel="noopener" href="https://pastebin.ubuntu.com/p/VnTQmCFscv/">当前版本代码</a></p>
+ 
+      <!-- reward -->
+      
+    </div>
+    
+
+    <!-- copyright -->
+    
+    <div class="declare">
+      <ul class="post-copyright">
+        <li>
+          <i class="ri-copyright-line"></i>
+          <strong>Copyright： </strong>
+          
+          Copyright is owned by the author. For commercial reprints, please contact the author for authorization. For non-commercial reprints, please indicate the source.
+          
+        </li>
+      </ul>
+    </div>
+    
+    <footer class="article-footer">
+       
+<div class="share-btn">
+      <span class="share-sns share-outer">
+        <i class="ri-share-forward-line"></i>
+        分享
+      </span>
+      <div class="share-wrap">
+        <i class="arrow"></i>
+        <div class="share-icons">
+          
+          <a class="weibo share-sns" href="javascript:;" data-type="weibo">
+            <i class="ri-weibo-fill"></i>
+          </a>
+          <a class="weixin share-sns wxFab" href="javascript:;" data-type="weixin">
+            <i class="ri-wechat-fill"></i>
+          </a>
+          <a class="qq share-sns" href="javascript:;" data-type="qq">
+            <i class="ri-qq-fill"></i>
+          </a>
+          <a class="douban share-sns" href="javascript:;" data-type="douban">
+            <i class="ri-douban-line"></i>
+          </a>
+          <!-- <a class="qzone share-sns" href="javascript:;" data-type="qzone">
+            <i class="icon icon-qzone"></i>
+          </a> -->
+          
+          <a class="facebook share-sns" href="javascript:;" data-type="facebook">
+            <i class="ri-facebook-circle-fill"></i>
+          </a>
+          <a class="twitter share-sns" href="javascript:;" data-type="twitter">
+            <i class="ri-twitter-fill"></i>
+          </a>
+          <a class="google share-sns" href="javascript:;" data-type="google">
+            <i class="ri-google-fill"></i>
+          </a>
+        </div>
+      </div>
+</div>
+
+<div class="wx-share-modal">
+    <a class="modal-close" href="javascript:;"><i class="ri-close-circle-line"></i></a>
+    <p>扫一扫，分享到微信</p>
+    <div class="wx-qrcode">
+      <img src="//api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://jieli-matrix.github.io/task/" alt="微信分享二维码">
+    </div>
+</div>
+
+<div id="share-mask"></div>  
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E4%BC%98%E5%8C%96/" rel="tag">优化</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E7%AE%97%E6%B3%95/" rel="tag">算法</a></li></ul>
+
+    </footer>
+  </div>
+
+   
+  <nav class="article-nav">
+    
+      <a href="/dptheory/" class="article-nav-link">
+        <strong class="article-nav-caption">上一篇</strong>
+        <div class="article-nav-title">
+          
+            动态规划(一)：Exact Dynamic Programming
+          
+        </div>
+      </a>
+    
+    
+      <a href="/palid/" class="article-nav-link">
+        <strong class="article-nav-caption">下一篇</strong>
+        <div class="article-nav-title">回文数乘法之数学技巧优化</div>
+      </a>
+    
+  </nav>
+
+   
+<!-- valine评论 -->
+<div id="vcomments-box">
+  <div id="vcomments"></div>
+</div>
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/valine@1.4.14/dist/Valine.min.js"></script>
+<script>
+  new Valine({
+    el: "#vcomments",
+    app_id: "c5xH31KSltW5u7gCuwHpk4N7-gzGzoHsz",
+    app_key: "j4stowtqUSucOaK8usdRWJCx",
+    path: window.location.pathname,
+    avatar: "monsterid",
+    placeholder: "给我的文章加点评论吧~",
+    recordIP: true,
+  });
+  const infoEle = document.querySelector("#vcomments .info");
+  if (infoEle && infoEle.childNodes && infoEle.childNodes.length > 0) {
+    infoEle.childNodes.forEach(function (item) {
+      item.parentNode.removeChild(item);
+    });
+  }
+</script>
+<style>
+  #vcomments-box {
+    padding: 5px 30px;
+  }
+
+  @media screen and (max-width: 800px) {
+    #vcomments-box {
+      padding: 5px 0px;
+    }
+  }
+
+  #vcomments-box #vcomments {
+    background-color: #fff;
+  }
+
+  .v .vlist .vcard .vh {
+    padding-right: 20px;
+  }
+
+  .v .vlist .vcard {
+    padding-left: 10px;
+  }
+</style>
+
+ 
+   
+     
+</article>
+
+</section>
+      <footer class="footer">
+  <div class="outer">
+    <ul>
+      <li>
+        Copyrights &copy;
+        2021
+        <i class="ri-heart-fill heart_icon"></i> Jie Li
+      </li>
+    </ul>
+    <ul>
+      <li>
+        
+        
+        
+        Powered by <a href="https://hexo.io" target="_blank">Hexo</a>
+        <span class="division">|</span>
+        Theme - <a href="https://github.com/Shen-Yu/hexo-theme-ayer" target="_blank">Ayer</a>
+        
+      </li>
+    </ul>
+    <ul>
+      <li>
+        
+        
+        <span>
+  <span><i class="ri-user-3-fill"></i>Visitors:<span id="busuanzi_value_site_uv"></span></s>
+  <span class="division">|</span>
+  <span><i class="ri-eye-fill"></i>Views:<span id="busuanzi_value_page_pv"></span></span>
+</span>
+        
+      </li>
+    </ul>
+    <ul>
+      
+    </ul>
+    <ul>
+      
+    </ul>
+    <ul>
+      <li>
+        <!-- cnzz统计 -->
+        
+        <script type="text/javascript" src='https://s9.cnzz.com/z_stat.php?id=1279624872&amp;web_id=1279624872'></script>
+        
+      </li>
+    </ul>
+  </div>
+</footer>
+      <div class="float_btns">
+        <div class="totop" id="totop">
+  <i class="ri-arrow-up-line"></i>
+</div>
+
+<div class="todark" id="todark">
+  <i class="ri-moon-line"></i>
+</div>
+
+      </div>
+    </main>
+    <aside class="sidebar on">
+      <button class="navbar-toggle"></button>
+<nav class="navbar">
+  
+  <div class="logo">
+    <a href="/"><img src="/images/ayer-side.svg" alt="Trace of Life"></a>
+  </div>
+  
+  <ul class="nav nav-main">
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/">主页</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/archives">归档</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/categories">分类</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/tags">标签</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/friends">友链</a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-item-link" href="/aboutme">关于我</a>
+    </li>
+    
+  </ul>
+</nav>
+<nav class="navbar navbar-bottom">
+  <ul class="nav">
+    <li class="nav-item">
+      
+      <a class="nav-item-link nav-item-search"  title="Search">
+        <i class="ri-search-line"></i>
+      </a>
+      
+      
+      <a class="nav-item-link" target="_blank" href="/atom.xml" title="RSS Feed">
+        <i class="ri-rss-line"></i>
+      </a>
+      
+    </li>
+  </ul>
+</nav>
+<div class="search-form-wrap">
+  <div class="local-search local-search-plugin">
+  <input type="search" id="local-search-input" class="local-search-input" placeholder="Search...">
+  <div id="local-search-result" class="local-search-result"></div>
+</div>
+</div>
+    </aside>
+    <script>
+      if (window.matchMedia("(max-width: 768px)").matches) {
+        document.querySelector('.content').classList.remove('on');
+        document.querySelector('.sidebar').classList.remove('on');
+      }
+    </script>
+    <div id="mask"></div>
+
+<!-- #reward -->
+<div id="reward">
+  <span class="close"><i class="ri-close-line"></i></span>
+  <p class="reward-p"><i class="ri-cup-line"></i>请我喝杯咖啡吧~</p>
+  <div class="reward-box">
+    
+    <div class="reward-item">
+      <img class="reward-img" src="https://cdn.jsdelivr.net/gh/Shen-Yu/cdn/img/alipay.jpg">
+      <span class="reward-type">支付宝</span>
+    </div>
+    
+    
+    <div class="reward-item">
+      <img class="reward-img" src="https://cdn.jsdelivr.net/gh/Shen-Yu/cdn/img/wechat.jpg">
+      <span class="reward-type">微信</span>
+    </div>
+    
+  </div>
+</div>
+    
+<script src="/js/jquery-2.0.3.min.js"></script>
+
+
+<script src="/js/lazyload.min.js"></script>
+
+<!-- Tocbot -->
+
+
+<script src="/js/tocbot.min.js"></script>
+
+<script>
+  tocbot.init({
+    tocSelector: '.tocbot',
+    contentSelector: '.article-entry',
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    hasInnerContainers: true,
+    scrollSmooth: true,
+    scrollContainer: 'main',
+    positionFixedSelector: '.tocbot',
+    positionFixedClass: 'is-position-fixed',
+    fixedSidebarOffset: 'auto'
+  });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/jquery-modal@0.9.2/jquery.modal.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jquery-modal@0.9.2/jquery.modal.min.css">
+<script src="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/js/jquery.justifiedGallery.min.js"></script>
+
+<script src="/dist/main.js"></script>
+
+<!-- ImageViewer -->
+
+<!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                <!--  Controls are self-explanatory. Order can be changed. -->
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" style="display:none" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css">
+<script src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"></script>
+
+<script>
+    function viewer_init() {
+        let pswpElement = document.querySelectorAll('.pswp')[0];
+        let $imgArr = document.querySelectorAll(('.article-entry img:not(.reward-img)'))
+
+        $imgArr.forEach(($em, i) => {
+            $em.onclick = () => {
+                // slider展开状态
+                // todo: 这样不好，后面改成状态
+                if (document.querySelector('.left-col.show')) return
+                let items = []
+                $imgArr.forEach(($em2, i2) => {
+                    let img = $em2.getAttribute('data-idx', i2)
+                    let src = $em2.getAttribute('data-target') || $em2.getAttribute('src')
+                    let title = $em2.getAttribute('alt')
+                    // 获得原图尺寸
+                    const image = new Image()
+                    image.src = src
+                    items.push({
+                        src: src,
+                        w: image.width || $em2.width,
+                        h: image.height || $em2.height,
+                        title: title
+                    })
+                })
+                var gallery = new PhotoSwipe(pswpElement, PhotoSwipeUI_Default, items, {
+                    index: parseInt(i)
+                });
+                gallery.init()
+            }
+        })
+    }
+    viewer_init()
+</script>
+
+<!-- MathJax -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+      tex2jax: {
+          inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+          processEscapes: true,
+          skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+  });
+
+  MathJax.Hub.Queue(function() {
+      var all = MathJax.Hub.getAllJax(), i;
+      for(i=0; i < all.length; i += 1) {
+          all[i].SourceElement().parentNode.className += ' has-jax';
+      }
+  });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/mathjax@2.7.6/unpacked/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script>
+  var ayerConfig = {
+    mathjax: true
+  }
+</script>
+
+<!-- Katex -->
+
+<!-- busuanzi  -->
+
+
+<script src="/js/busuanzi-2.3.pure.min.js"></script>
+
+
+<!-- ClickLove -->
+
+<!-- ClickBoom1 -->
+
+<!-- ClickBoom2 -->
+
+<!-- CodeCopy -->
+
+
+<link rel="stylesheet" href="/css/clipboard.css">
+
+<script src="https://cdn.jsdelivr.net/npm/clipboard@2/dist/clipboard.min.js"></script>
+<script>
+  function wait(callback, seconds) {
+    var timelag = null;
+    timelag = window.setTimeout(callback, seconds);
+  }
+  !function (e, t, a) {
+    var initCopyCode = function(){
+      var copyHtml = '';
+      copyHtml += '<button class="btn-copy" data-clipboard-snippet="">';
+      copyHtml += '<i class="ri-file-copy-2-line"></i><span>COPY</span>';
+      copyHtml += '</button>';
+      $(".highlight .code pre").before(copyHtml);
+      $(".article pre code").before(copyHtml);
+      var clipboard = new ClipboardJS('.btn-copy', {
+        target: function(trigger) {
+          return trigger.nextElementSibling;
+        }
+      });
+      clipboard.on('success', function(e) {
+        let $btn = $(e.trigger);
+        $btn.addClass('copied');
+        let $icon = $($btn.find('i'));
+        $icon.removeClass('ri-file-copy-2-line');
+        $icon.addClass('ri-checkbox-circle-line');
+        let $span = $($btn.find('span'));
+        $span[0].innerText = 'COPIED';
+        
+        wait(function () { // 等待两秒钟后恢复
+          $icon.removeClass('ri-checkbox-circle-line');
+          $icon.addClass('ri-file-copy-2-line');
+          $span[0].innerText = 'COPY';
+        }, 2000);
+      });
+      clipboard.on('error', function(e) {
+        e.clearSelection();
+        let $btn = $(e.trigger);
+        $btn.addClass('copy-failed');
+        let $icon = $($btn.find('i'));
+        $icon.removeClass('ri-file-copy-2-line');
+        $icon.addClass('ri-time-line');
+        let $span = $($btn.find('span'));
+        $span[0].innerText = 'COPY FAILED';
+        
+        wait(function () { // 等待两秒钟后恢复
+          $icon.removeClass('ri-time-line');
+          $icon.addClass('ri-file-copy-2-line');
+          $span[0].innerText = 'COPY';
+        }, 2000);
+      });
+    }
+    initCopyCode();
+  }(window, document);
+</script>
+
+
+<!-- CanvasBackground -->
+
+
+    
+  </div>
+</body>
+
+</html>
